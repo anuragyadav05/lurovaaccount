@@ -2,7 +2,7 @@
    RESET & COLOR PALETTE
    ========================================================================== */
 :root {
-  --font-family: 'Plus Jakarta Sans', sans-serif;
+  --font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   --primary-purple: #635bff;
   --primary-blue: #00d2ff;
   --gradient-accent: linear-gradient(135deg, #635bff 0%, #00d2ff 100%);
@@ -22,16 +22,22 @@
   padding: 0;
   font-family: var(--font-family);
   -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  width: 100%;
+  overflow-x: hidden;
 }
 
 body {
   background-color: #7b2cbf;
   min-height: 100vh;
+  min-height: 100dvh;
   display: flex;
   align-items: center;
   justify-content: center;
   position: relative;
-  overflow-x: hidden;
   padding: 20px;
   transition: background-color 0.4s ease;
 }
@@ -41,7 +47,7 @@ body.profile-view-active {
 }
 
 /* ==========================================================================
-   BACKGROUND ANIMATION ART
+   DESKTOP BACKGROUND ANIMATION ART
    ========================================================================== */
 .bg-art-container {
   position: fixed;
@@ -49,15 +55,16 @@ body.profile-view-active {
   left: 0;
   width: 100vw;
   height: 100vh;
+  height: 100dvh;
   z-index: -1;
   overflow: hidden;
   background: linear-gradient(135deg, #0d0628 0%, #2a085c 40%, #00c6ff 100%);
   transition: opacity 0.5s ease;
+  pointer-events: none;
 }
 
 .bg-art-container.fade-out {
   opacity: 0;
-  pointer-events: none;
 }
 
 .dot-pattern {
@@ -114,6 +121,7 @@ body.profile-view-active {
   max-width: 1020px;
   position: relative;
   z-index: 10;
+  margin: auto;
 }
 
 .auth-card {
@@ -124,6 +132,7 @@ body.profile-view-active {
   overflow: hidden;
   min-height: 580px;
   position: relative;
+  width: 100%;
 }
 
 .hidden { display: none !important; }
@@ -136,6 +145,7 @@ body.profile-view-active {
   justify-content: center;
   z-index: 2;
   background: #ffffff;
+  width: 100%;
 }
 
 .brand-header { margin-bottom: 16px; }
@@ -203,7 +213,7 @@ body.profile-view-active {
   transition: all 0.25s var(--transition-smooth);
 }
 
-.social-btn:hover {
+.social-btn:hover, .social-btn:active {
   background: #f8fafc;
   border-color: #cbd5e1;
   transform: translateY(-1px);
@@ -391,7 +401,7 @@ input:disabled, select:disabled {
   flex: 1;
 }
 
-.btn-primary:hover {
+.btn-primary:hover, .btn-primary:active {
   transform: translateY(-2px);
   box-shadow: 0 12px 20px -4px rgba(99, 91, 255, 0.5);
 }
@@ -408,7 +418,7 @@ input:disabled, select:disabled {
   color: var(--text-dark);
 }
 
-.btn-outline:hover {
+.btn-outline:hover, .btn-outline:active {
   background: #f8fafc;
   border-color: var(--text-dark);
 }
@@ -424,7 +434,7 @@ input:disabled, select:disabled {
   transition: transform 0.8s ease;
 }
 
-.btn-primary:hover .btn-glow { transform: rotate(30deg) translateX(100%); }
+.btn-primary:hover .btn-glow, .btn-primary:active .btn-glow { transform: rotate(30deg) translateX(100%); }
 
 /* RIGHT BANNER ARTWORK */
 .banner-container {
@@ -495,20 +505,21 @@ input:disabled, select:disabled {
   left: 0;
   width: 100vw;
   height: 100vh;
-  background: rgba(15, 23, 42, 0.55);
+  height: 100dvh;
+  background: rgba(15, 23, 42, 0.6);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  padding: 20px;
+  padding: 16px;
 }
 
 .modal-card {
   background: #ffffff;
   border-radius: var(--radius-xl);
-  padding: 36px 32px;
+  padding: 32px 24px;
   max-width: 420px;
   width: 100%;
   position: relative;
@@ -523,15 +534,15 @@ input:disabled, select:disabled {
 
 .close-modal-btn {
   position: absolute;
-  top: 18px;
-  right: 22px;
+  top: 14px;
+  right: 18px;
   background: none;
   border: none;
-  font-size: 1.6rem;
+  font-size: 1.8rem;
   color: var(--text-muted);
   cursor: pointer;
   line-height: 1;
-  transition: color 0.2s;
+  padding: 6px;
 }
 
 .close-modal-btn:hover { color: var(--text-dark); }
@@ -595,6 +606,7 @@ input:disabled, select:disabled {
   font-size: 0.85rem;
   color: var(--text-muted);
   margin-top: 2px;
+  word-break: break-all;
 }
 
 .account-tag {
@@ -661,6 +673,7 @@ input:disabled, select:disabled {
   font-weight: 700;
   font-size: 0.82rem;
   cursor: pointer;
+  padding: 6px;
 }
 
 .btn-text:hover { text-decoration: underline; }
@@ -671,7 +684,7 @@ input:disabled, select:disabled {
   margin: 20px 0;
 }
 
-.apps-badges { display: flex; gap: 8px; margin-top: 8px; }
+.apps-badges { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
 
 .app-badge {
   padding: 6px 12px;
@@ -700,14 +713,138 @@ input:disabled, select:disabled {
   font-weight: 600;
   cursor: pointer;
   text-align: center;
+  padding: 8px;
 }
 
 .btn-danger-text:hover { text-decoration: underline; }
 
-/* RESPONSIVE DESIGN */
+/* ==========================================================================
+   PURE WHITE SIMPLE MOBILE THEME (MAX-WIDTH: 850px)
+   ========================================================================== */
 @media (max-width: 850px) {
-  .banner-container { display: none; }
-  .auth-card { min-height: auto; }
-  .form-container { padding: 32px 24px; }
-  .profile-card { padding: 32px 24px; }
+  /* 1. Pure White Clean Mobile Background */
+  body {
+    background-color: #ffffff !important;
+    padding: 20px 16px;
+    align-items: flex-start;
+  }
+
+  /* 2. Hide all background art, gradients, spheres, and pills */
+  .bg-art-container {
+    display: none !important;
+  }
+
+  .banner-container {
+    display: none !important;
+  }
+
+  .app-canvas {
+    max-width: 100%;
+    width: 100%;
+  }
+
+  /* 3. Simple White Card without drop shadows */
+  .auth-card {
+    min-height: auto;
+    border-radius: 0;
+    box-shadow: none !important;
+    border: none !important;
+    background: #ffffff;
+  }
+
+  .form-container {
+    padding: 10px 0;
+    background: #ffffff;
+  }
+
+  /* 4. Top Centered Logo Branding */
+  .brand-header {
+    text-align: center;
+    margin-bottom: 24px;
+  }
+
+  .brand-logo {
+    height: 52px;
+    margin: 0 auto 12px auto;
+    display: block;
+  }
+
+  .brand-intro span {
+    font-size: 0.8rem;
+  }
+
+  .color-change-text {
+    font-size: 1.6rem;
+  }
+
+  .brand-intro p {
+    font-size: 0.82rem;
+  }
+
+  /* 5. Mobile Optimized Buttons & Inputs */
+  .social-login-grid {
+    flex-direction: row;
+    gap: 10px;
+  }
+
+  .social-btn {
+    min-height: 48px; /* Larger touch target */
+    border-radius: 12px;
+    font-size: 0.9rem;
+  }
+
+  input[type="text"],
+  input[type="email"],
+  input[type="tel"],
+  input[type="password"],
+  input[type="date"],
+  select {
+    min-height: 48px; /* Touch target height */
+    font-size: 16px; /* Prevents auto-zoom on iOS */
+    border-radius: 10px;
+    padding: 12px 14px;
+  }
+
+  .btn {
+    min-height: 48px;
+    border-radius: 12px;
+    font-size: 0.95rem;
+  }
+
+  .action-buttons-row {
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 8px;
+  }
+
+  .action-buttons-row .btn {
+    width: 100%;
+  }
+
+  .auth-form {
+    padding-right: 0;
+  }
+
+  /* Stack input grid rows on narrow screens */
+  .input-row, .profile-details-grid {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .detail-item {
+    flex: 1 1 100%;
+  }
+
+  .profile-card {
+    padding: 16px 0;
+    box-shadow: none;
+    border: none;
+    border-radius: 0;
+    background: #ffffff;
+  }
+
+  .modal-card {
+    padding: 24px 20px;
+    border-radius: 20px;
+  }
 }
