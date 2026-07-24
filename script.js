@@ -15,6 +15,9 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
+// Set Auth Persistence to LOCAL (keeps user signed in across browser sessions/mobile refreshes)
+auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+
 // ==========================================================================
 // 2. MAIN APPLICATION LOGIC
 // ==========================================================================
@@ -83,6 +86,7 @@ document.addEventListener("DOMContentLoaded", () => {
     switchToSignupBtn.addEventListener("click", (e) => {
       e.preventDefault();
       if (authCard) authCard.classList.add("signup-mode");
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     });
   }
 
@@ -90,6 +94,7 @@ document.addEventListener("DOMContentLoaded", () => {
     switchToLoginBtn.addEventListener("click", (e) => {
       e.preventDefault();
       if (authCard) authCard.classList.remove("signup-mode");
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     });
   }
 
@@ -109,7 +114,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Close modal when clicking outside card
   if (forgotModal) {
     forgotModal.addEventListener("click", (e) => {
       if (e.target === forgotModal) {
@@ -164,7 +168,6 @@ document.addEventListener("DOMContentLoaded", () => {
         if (doc.exists) {
           currentUserData = doc.data();
         } else {
-          // If signed in via Social Auth for the first time, create Firestore profile
           currentUserData = await handleNewSocialUserProfile(user);
         }
 
@@ -180,7 +183,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   /* ------------------------------------------------------------------------
-     D. SOCIAL LOGINS (GOOGLE & APPLE)
+     D. SOCIAL LOGINS (GOOGLE & APPLE - MOBILE POPUP / REDIRECT SAFE)
      ------------------------------------------------------------------------ */
   async function handleNewSocialUserProfile(user) {
     const nameParts = (user.displayName || "").split(" ");
@@ -208,7 +211,11 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       await auth.signInWithPopup(provider);
     } catch (error) {
-      alert("Google Auth Error: " + error.message);
+      if (error.code === 'auth/popup-blocked' || error.code === 'auth/popup-closed-by-user') {
+        auth.signInWithRedirect(provider);
+      } else {
+        alert("Google Auth Error: " + error.message);
+      }
     }
   }
 
@@ -217,7 +224,11 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
       await auth.signInWithPopup(provider);
     } catch (error) {
-      alert("Apple Auth Error: " + error.message);
+      if (error.code === 'auth/popup-blocked' || error.code === 'auth/popup-closed-by-user') {
+        auth.signInWithRedirect(provider);
+      } else {
+        alert("Apple Auth Error: " + error.message);
+      }
     }
   }
 
@@ -402,6 +413,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (profileCard) profileCard.classList.remove("hidden");
     if (bgArt) bgArt.classList.add("fade-out");
     document.body.classList.add("profile-view-active");
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   function switchToAuthView() {
@@ -412,6 +424,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (loginForm) loginForm.reset();
     if (signupForm) signupForm.reset();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   /* ------------------------------------------------------------------------
