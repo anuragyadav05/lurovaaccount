@@ -130,7 +130,7 @@ body.profile-view-active {
   box-shadow: 0 30px 60px -12px rgba(0, 0, 0, 0.35);
   display: flex;
   overflow: hidden;
-  min-height: 580px;
+  min-height: 560px;
   position: relative;
   width: 100%;
 }
@@ -139,7 +139,7 @@ body.profile-view-active {
 
 .form-container {
   flex: 1.1;
-  padding: 40px 44px;
+  padding: 36px 40px;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -148,25 +148,25 @@ body.profile-view-active {
   width: 100%;
 }
 
-.brand-header { margin-bottom: 16px; }
+.brand-header { margin-bottom: 12px; }
 
 .brand-logo {
-  height: 54px;
+  height: 50px;
   width: auto;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
   object-fit: contain;
 }
 
 .brand-intro span {
   color: var(--text-muted);
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
 .color-change-text {
-  font-size: 1.8rem;
+  font-size: 1.7rem;
   font-weight: 800;
   background: linear-gradient(90deg, #635bff, #00d2ff, #ff0080, #7928ca, #635bff);
   background-size: 300% 100%;
@@ -184,7 +184,7 @@ body.profile-view-active {
 
 .brand-intro p {
   color: var(--text-muted);
-  font-size: 0.82rem;
+  font-size: 0.8rem;
 }
 
 /* ==========================================================================
@@ -193,7 +193,7 @@ body.profile-view-active {
 .social-login-grid {
   display: flex;
   gap: 10px;
-  margin-bottom: 12px;
+  margin-bottom: 6px;
 }
 
 .social-btn {
@@ -202,11 +202,11 @@ body.profile-view-active {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 10px 14px;
+  padding: 9px 12px;
   background: #ffffff;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   font-weight: 700;
   color: var(--text-dark);
   cursor: pointer;
@@ -226,7 +226,7 @@ body.profile-view-active {
   display: flex;
   align-items: center;
   text-align: center;
-  margin: 8px 0 12px;
+  margin: 6px 0 8px;
 }
 
 .divider-text::before,
@@ -239,13 +239,13 @@ body.profile-view-active {
 .divider-text span {
   padding: 0 10px;
   color: var(--text-muted);
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   font-weight: 600;
   text-transform: uppercase;
 }
 
 /* ==========================================================================
-   SLIDING TRACK & FORM INPUTS
+   SLIDING TRACK & FORM INPUTS (TIGHT GAP INTEGRATED)
    ========================================================================== */
 .form-viewport { overflow: hidden; width: 100%; }
 
@@ -262,17 +262,18 @@ body.profile-view-active {
   padding-right: 12px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
 }
 
-.auth-form.tight-gap { gap: 8px; }
+/* Reduced gap specifically for login form elements */
+.auth-form.tight-gap { gap: 4px; }
 
 .input-row { display: flex; gap: 10px; }
 
 .input-group {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px; /* Minimal gap between label and input box */
   flex: 1;
 }
 
@@ -289,7 +290,7 @@ input[type="password"],
 input[type="date"],
 select {
   width: 100%;
-  padding: 10px 12px;
+  padding: 8px 12px; /* Slimmer vertical input padding */
   background: var(--input-bg);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
@@ -317,6 +318,7 @@ input:disabled, select:disabled {
   justify-content: space-between;
   align-items: center;
   margin-top: 2px;
+  margin-bottom: 2px;
 }
 
 .checkbox-container {
@@ -379,12 +381,12 @@ input:disabled, select:disabled {
 .action-buttons-row {
   display: flex;
   gap: 10px;
-  margin-top: 4px;
+  margin-top: 4px; /* Minimal gap above login button */
 }
 
 .btn {
   position: relative;
-  padding: 11px 20px;
+  padding: 10px 18px;
   border-radius: var(--radius-sm);
   font-size: 0.85rem;
   font-weight: 700;
@@ -722,14 +724,12 @@ input:disabled, select:disabled {
    PURE WHITE SIMPLE MOBILE THEME (MAX-WIDTH: 850px)
    ========================================================================== */
 @media (max-width: 850px) {
-  /* 1. Pure White Clean Mobile Background */
   body {
     background-color: #ffffff !important;
-    padding: 20px 16px;
+    padding: 16px 12px;
     align-items: flex-start;
   }
 
-  /* 2. Hide all background art, gradients, spheres, and pills */
   .bg-art-container {
     display: none !important;
   }
@@ -743,7 +743,6 @@ input:disabled, select:disabled {
     width: 100%;
   }
 
-  /* 3. Simple White Card without drop shadows */
   .auth-card {
     min-height: auto;
     border-radius: 0;
@@ -753,44 +752,56 @@ input:disabled, select:disabled {
   }
 
   .form-container {
-    padding: 10px 0;
+    padding: 8px 0;
     background: #ffffff;
   }
 
-  /* 4. Top Centered Logo Branding */
   .brand-header {
     text-align: center;
-    margin-bottom: 24px;
+    margin-bottom: 18px;
   }
 
   .brand-logo {
-    height: 52px;
-    margin: 0 auto 12px auto;
+    height: 48px;
+    margin: 0 auto 8px auto;
     display: block;
   }
 
   .brand-intro span {
-    font-size: 0.8rem;
+    font-size: 0.78rem;
   }
 
   .color-change-text {
-    font-size: 1.6rem;
+    font-size: 1.5rem;
   }
 
   .brand-intro p {
-    font-size: 0.82rem;
+    font-size: 0.8rem;
   }
 
-  /* 5. Mobile Optimized Buttons & Inputs */
+  .auth-form.tight-gap {
+    gap: 6px; /* Tight vertical gap on mobile */
+  }
+
   .social-login-grid {
     flex-direction: row;
-    gap: 10px;
+    gap: 8px;
+    margin-bottom: 8px;
   }
 
   .social-btn {
-    min-height: 48px; /* Larger touch target */
-    border-radius: 12px;
-    font-size: 0.9rem;
+    min-height: 44px;
+    border-radius: 10px;
+    font-size: 0.85rem;
+    padding: 8px 12px;
+  }
+
+  .divider-text {
+    margin: 4px 0 8px;
+  }
+
+  .input-group {
+    gap: 2px;
   }
 
   input[type="text"],
@@ -799,22 +810,27 @@ input:disabled, select:disabled {
   input[type="password"],
   input[type="date"],
   select {
-    min-height: 48px; /* Touch target height */
-    font-size: 16px; /* Prevents auto-zoom on iOS */
+    min-height: 44px;
+    font-size: 16px; /* Prevents auto-zoom on mobile iOS Safari */
     border-radius: 10px;
-    padding: 12px 14px;
+    padding: 10px 12px;
+  }
+
+  .form-utility-row {
+    margin-top: 2px;
+    margin-bottom: 2px;
   }
 
   .btn {
-    min-height: 48px;
-    border-radius: 12px;
-    font-size: 0.95rem;
+    min-height: 46px;
+    border-radius: 10px;
+    font-size: 0.9rem;
   }
 
   .action-buttons-row {
     flex-direction: column;
-    gap: 10px;
-    margin-top: 8px;
+    gap: 8px;
+    margin-top: 6px;
   }
 
   .action-buttons-row .btn {
@@ -825,10 +841,9 @@ input:disabled, select:disabled {
     padding-right: 0;
   }
 
-  /* Stack input grid rows on narrow screens */
   .input-row, .profile-details-grid {
     flex-direction: column;
-    gap: 6px;
+    gap: 10px;
   }
 
   .detail-item {
@@ -836,7 +851,7 @@ input:disabled, select:disabled {
   }
 
   .profile-card {
-    padding: 16px 0;
+    padding: 12px 0;
     box-shadow: none;
     border: none;
     border-radius: 0;
@@ -844,7 +859,7 @@ input:disabled, select:disabled {
   }
 
   .modal-card {
-    padding: 24px 20px;
-    border-radius: 20px;
+    padding: 22px 18px;
+    border-radius: 18px;
   }
 }
