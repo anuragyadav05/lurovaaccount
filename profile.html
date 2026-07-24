@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LUROVA Account | User Profile</title>
+  <link rel="stylesheet" href="style.css" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+</head>
+<body class="profile-view-active">
+
+  <main class="app-canvas">
+
+    <div class="profile-card" id="profileCard">
+      
+      <div style="text-align: center; margin-bottom: 20px;">
+        <img src="https://plain-apac-prod-public.komododecks.com/202607/23/yYdBFLQn5cU9AT4rDJ7v/image.png" alt="LUROVA Logo" style="height: 48px; width: auto;" />
+      </div>
+
+      <div class="profile-header">
+        <div class="avatar-container">
+          <div class="avatar-circle" id="userAvatar">L</div>
+          <span class="status-badge"></span>
+        </div>
+        <h2 id="profileFullName">Loading Name...</h2>
+        <p class="profile-email" id="profileEmail">loading@lurova.life</p>
+        <span class="account-tag">LUROVA Central Identity</span>
+      </div>
+
+      <div class="profile-content">
+        <div class="profile-section-title">
+          <h3>Personal Details</h3>
+          <button type="button" class="btn-text" id="editToggleBtn">Edit Details</button>
+        </div>
+
+        <form id="profileDetailsForm" class="profile-details-grid">
+          
+          <div class="detail-item">
+            <span class="detail-label">First Name</span>
+            <input type="text" id="profileFirstName" disabled required />
+          </div>
+          
+          <div class="detail-item">
+            <span class="detail-label">Last Name</span>
+            <input type="text" id="profileLastName" disabled required />
+          </div>
+
+          <div class="detail-item full-width">
+            <span class="detail-label">Phone Number</span>
+            <input type="tel" id="profilePhone" disabled required />
+          </div>
+
+          <div class="detail-item full-width">
+            <span class="detail-label">Address <small class="optional-tag">(Optional)</small></span>
+            <input type="text" id="profileAddress" placeholder="Enter your full address" disabled />
+          </div>
+
+          <div class="detail-item">
+            <span class="detail-label">Date of Birth <small class="optional-tag">(Optional)</small></span>
+            <input type="date" id="profileDob" disabled />
+          </div>
+
+          <div class="detail-item">
+            <span class="detail-label">Gender <small class="optional-tag">(Optional)</small></span>
+            <select id="profileGender" disabled>
+              <option value="">Select Gender</option>
+              <option value="Male">Male</option>
+              <option value="Female">Female</option>
+              <option value="Other">Other</option>
+              <option value="Prefer not to say">Prefer not to say</option>
+            </select>
+          </div>
+
+          <div class="action-buttons-group hidden" id="editActions">
+            <button type="button" class="btn btn-outline" id="cancelEditBtn">Cancel</button>
+            <button type="submit" class="btn btn-primary" id="saveProfileBtn">Save Changes</button>
+          </div>
+        </form>
+
+        <hr class="divider" />
+
+        <div class="connected-apps">
+          <span class="detail-label">Active Sub-Domains</span>
+          <div class="apps-badges">
+            <span class="app-badge">ads.lurova.life</span>
+            <span class="app-badge">ott.lurova.life</span>
+          </div>
+        </div>
+
+        <div class="profile-footer">
+          <button type="button" class="btn btn-outline btn-logout" id="logoutBtn">Log Out</button>
+          <button type="button" class="btn-danger-text" id="deleteAccountBtn">Delete Account</button>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+  <script>
+    // 1. FIREBASE INITIALIZATION
+    const firebaseConfig = {
+      apiKey: "AIzaSyCZvJC6xQkhuM7MkybSwn7FqW5W-ByTKFk",
+      authDomain: "lurova-account.firebaseapp.com",
+      projectId: "lurova-account",
+      storageBucket: "lurova-account.firebasestorage.app",
+      messagingSenderId: "925302881748",
+      appId: "1:925302881748:web:da8f9f6b298e27b758ea41"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    document.addEventListener("DOMContentLoaded", () => {
+      // Elements
+      const userAvatar = document.getElementById("userAvatar");
+      const profileFullName = document.getElementById("profileFullName");
+      const profileEmail = document.getElementById("profileEmail");
+      const profileFirstName = document.getElementById("profileFirstName");
+      const profileLastName = document.getElementById("profileLastName");
+      const profilePhone = document.getElementById("profilePhone");
+      const profileAddress = document.getElementById("profileAddress");
+      const profileDob = document.getElementById("profileDob");
+      const profileGender = document.getElementById("profileGender");
+
+      const profileDetailsForm = document.getElementById("profileDetailsForm");
+      const editToggleBtn = document.getElementById("editToggleBtn");
+      const editActions = document.getElementById("editActions");
+      const cancelEditBtn = document.getElementById("cancelEditBtn");
+      const logoutBtn = document.getElementById("logoutBtn");
+      const deleteAccountBtn = document.getElementById("deleteAccountBtn");
+
+      let currentUserData = null;
+
+      // 2. CHECK FIREBASE AUTH STATE
+      auth.onAuthStateChanged(async (user) => {
+        if (user) {
+          try {
+            const doc = await db.collection("users").doc(user.uid).get();
+            if (doc.exists) {
+              currentUserData = doc.data();
+              renderProfile(currentUserData);
+            } else {
+              console.error("No Firestore profile found for user.");
+            }
+          } catch (error) {
+            console.error("Error loading user profile:", error);
+          }
+        } else {
+          // If user is not logged in, redirect back to login page
+          window.location.href = "index.html";
+        }
+      });
+
+      // 3. RENDER PROFILE DETAILS
+      function renderProfile(data) {
+        if (!data) return;
+
+        userAvatar.textContent = data.firstName ? data.firstName.charAt(0).toUpperCase() : "L";
+        profileFullName.textContent = `${data.firstName || ''} ${data.lastName || ''}`.trim() || "LUROVA User";
+        profileEmail.textContent = data.email || "";
+
+        profileFirstName.value = data.firstName || "";
+        profileLastName.value = data.lastName || "";
+        profilePhone.value = data.phone || "";
+        profileAddress.value = data.address || "";
+        profileDob.value = data.dob || "";
+        profileGender.value = data.gender || "";
+      }
+
+      // 4. TOGGLE EDIT MODE
+      editToggleBtn.addEventListener("click", () => {
+        profileFirstName.disabled = false;
+        profileLastName.disabled = false;
+        profilePhone.disabled = false;
+        profileAddress.disabled = false;
+        profileDob.disabled = false;
+        profileGender.disabled = false;
+
+        editActions.classList.remove("hidden");
+        editToggleBtn.style.display = "none";
+      });
+
+      cancelEditBtn.addEventListener("click", () => {
+        renderProfile(currentUserData);
+        disableEditMode();
+      });
+
+      // 5. SAVE PROFILE EDITS TO FIRESTORE
+      profileDetailsForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const user = auth.currentUser;
+        if (!user) return;
+
+        const updatedFields = {
+          firstName: profileFirstName.value.trim(),
+          lastName: profileLastName.value.trim(),
+          phone: profilePhone.value.trim(),
+          address: profileAddress.value.trim(),
+          dob: profileDob.value,
+          gender: profileGender.value
+        };
+
+        try {
+          await db.collection("users").doc(user.uid).update(updatedFields);
+          currentUserData = { ...currentUserData, ...updatedFields };
+          renderProfile(currentUserData);
+          disableEditMode();
+          alert("Profile details saved successfully!");
+        } catch (error) {
+          alert("Error saving profile: " + error.message);
+        }
+      });
+
+      function disableEditMode() {
+        profileFirstName.disabled = true;
+        profileLastName.disabled = true;
+        profilePhone.disabled = true;
+        profileAddress.disabled = true;
+        profileDob.disabled = true;
+        profileGender.disabled = true;
+
+        editActions.classList.add("hidden");
+        editToggleBtn.style.display = "inline-block";
+      }
+
+      // 6. LOGOUT
+      logoutBtn.addEventListener("click", async () => {
+        try {
+          await auth.signOut();
+          window.location.href = "index.html";
+        } catch (error) {
+          alert("Logout Error: " + error.message);
+        }
+      });
+
+      // 7. DELETE ACCOUNT
+      deleteAccountBtn.addEventListener("click", async () => {
+        const user = auth.currentUser;
+        if (!user) return;
+
+        if (confirm("Are you sure you want to delete your LUROVA Account? This action is permanent.")) {
+          try {
+            await db.collection("users").doc(user.uid).delete();
+            await user.delete();
+            alert("Your LUROVA Account has been permanently deleted.");
+            window.location.href = "index.html";
+          } catch (error) {
+            alert("Delete Error: " + error.message + " (Please log out and log back in to perform this security operation).");
+          }
+        }
+      });
+    });
+  </script>
+</body>
+</html>
