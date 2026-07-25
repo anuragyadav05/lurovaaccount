@@ -26,7 +26,7 @@ auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
 })();
 
 // ==========================================================================
-// SAFARI-SAFE LOGIN/SIGNUP SUCCESS REDIRECT & SHARED COOKIE FUNCTION
+// SAFARI-SAFE REDIRECT & SHARED COOKIE FUNCTION (WITH redirect_to SUPPORT)
 // ==========================================================================
 function onLoginSuccess(user, userData) {
   const email = user.email || '';
@@ -40,28 +40,44 @@ function onLoginSuccess(user, userData) {
   }
   
   const uid = user.uid || '';
+  const phone = (userData && userData.phone) || user.phoneNumber || '';
 
-  // 1. Shared Root Domain Cookie सेट करें (.lurova.life ताकि ott.lurova.life इसे तुरंत पढ़ सके)
-  const cookiePayload = JSON.stringify({ email, name, uid });
+  // 1. Shared Root Domain Cookie सेट करें (.lurova.life ताकि सब-डोमेन इसे तुरंत पढ़ सकें)
+  const cookiePayload = JSON.stringify({ email, name, uid, phone });
   document.cookie = `lurova_user=${encodeURIComponent(cookiePayload)}; domain=.lurova.life; path=/; max-age=2592000; SameSite=Lax; Secure`;
 
-  // 2. URL Query String तैयार करें (सफारी और मोबाइल ब्राउज़र्स के लिए 100% सेफ)
+  // 2. URL पैरामीटर्स (redirect_to, redirect_url, redirect) चेक करें
   const urlParams = new URLSearchParams(window.location.search);
-  const redirectUrl = urlParams.get('redirect_url') || urlParams.get('redirect');
+  const redirectToParam = urlParams.get('redirect_to');
+  const redirectUrl = urlParams.get('redirect_url') || urlParams.get('redirect') || redirectToParam;
 
   if (redirectUrl) {
     try {
       const finalUrl = new URL(redirectUrl);
+
+      // JSON एन्कोडेड user ऑब्जेक्ट पैकेज (redirect_to सपोर्ट के लिए)
+      const userJSONPayload = JSON.stringify({
+        uid: uid,
+        email: email,
+        displayName: name,
+        phone: phone
+      });
+
+      finalUrl.searchParams.set('user', encodeURIComponent(userJSONPayload));
+
+      // स्टैंडर्ड यूआरएल पैरामीटर्स
       finalUrl.searchParams.set('email', email);
       finalUrl.searchParams.set('name', name);
       finalUrl.searchParams.set('uid', uid);
       finalUrl.searchParams.set('safari_auth', 'true');
       
-      // सफारी में बिना बैक-कैश के क्लीन रीडायरेक्ट
+      // सफारी और मोबाइल ब्राउज़र्स में बिना बैक-कैश के क्लीन रीडायरेक्ट
       window.location.replace(finalUrl.toString());
       return true;
     } catch (e) {
-      window.location.href = redirectUrl;
+      console.error("Invalid Redirect URL:", e);
+      const encodedUser = encodeURIComponent(JSON.stringify({ uid, email, displayName: name, phone }));
+      window.location.href = `${redirectUrl}?user=${encodedUser}`;
       return true;
     }
   }
@@ -238,7 +254,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /* ------------------------------------------------------------------------
-     D. FIREBASE AUTH STATE OBSERVER
+     D. FIREBASE AUTH STATE OBSERVER (ऑटोमैटिक कुकी & रीडायरेक्ट निष्पादन)
      ------------------------------------------------------------------------ */
   auth.onAuthStateChanged(async (user) => {
     if (user) {
@@ -255,7 +271,7 @@ document.addEventListener("DOMContentLoaded", () => {
         // कुकी सेट करें और चेक करें कि क्या रीडायरेक्ट करना है
         const isRedirected = onLoginSuccess(user, currentUserData);
 
-        // अगर कोई redirect_url नहीं दिया गया है, तो लोकल प्रोफाइल कार्ड दिखाएं
+        // अगर कोई redirect parameter नहीं दिया गया है, तो अकाउंट पेज पर प्रोफाइल दिखाएं
         if (!isRedirected) {
           populateProfileFields(currentUserData);
           switchToProfileView();
@@ -396,7 +412,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         alert("LUROVA Account created successfully!");
 
-        // सफारी सेफ रीडायरेक्ट और कुकी एग्जीक्यूशन
+        // सफारी/सब-डोमेन सेफ रीडायरेक्ट और कुकी निष्पादन
         const isRedirected = onLoginSuccess(user, currentUserData);
         if (!isRedirected) {
           populateProfileFields(currentUserData);
@@ -465,7 +481,7 @@ document.addEventListener("DOMContentLoaded", () => {
             currentUserData = doc.data();
           }
 
-          // सफारी सेफ रीडायरेक्ट और कुकी एग्जीक्यूशन
+          // सफारी/सब-डोमेन सेफ रीडायरेक्ट और कुकी निष्पादन
           const isRedirected = onLoginSuccess(user, currentUserData);
 
           if (!isRedirected) {
@@ -600,7 +616,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (logoutBtn) {
     logoutBtn.addEventListener("click", async () => {
       try {
-        // Shared domain cookie को भी डिलीट करें
+        // Shared domain cookie हटाएँ
         document.cookie = "lurova_user=; domain=.lurova.life; path=/; max-age=0;";
         await auth.signOut();
         disableEditMode();
