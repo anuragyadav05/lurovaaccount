@@ -15,7 +15,7 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-// Set Auth Persistence to LOCAL
+// Set Auth Persistence to LOCAL (session stays across refreshes)
 auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
 
 // Initialize EmailJS (Optional: Replace with your actual Public Key if used)
@@ -26,25 +26,26 @@ auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
 })();
 
 // ==========================================================================
-// SHARED DOMAIN COOKIE & LOGIN SUCCESS REDIRECT FUNCTION
+// SAFARI-SAFE LOGIN/SIGNUP SUCCESS REDIRECT & SHARED COOKIE FUNCTION
 // ==========================================================================
 function onLoginSuccess(user, userData) {
+  const email = user.email || '';
+  
   // नाम निर्धारित करें (Firestore डाटा या Auth डिस्प्ले नेम से)
   let name = "";
   if (userData && userData.firstName) {
     name = `${userData.firstName} ${userData.lastName || ''}`.trim();
   } else {
-    name = user.displayName || (user.email ? user.email.split('@')[0] : 'User');
+    name = user.displayName || (email ? email.split('@')[0] : 'User');
   }
-
-  const email = user.email || '';
+  
   const uid = user.uid || '';
 
   // 1. Shared Root Domain Cookie सेट करें (.lurova.life ताकि ott.lurova.life इसे तुरंत पढ़ सके)
   const cookiePayload = JSON.stringify({ email, name, uid });
   document.cookie = `lurova_user=${encodeURIComponent(cookiePayload)}; domain=.lurova.life; path=/; max-age=2592000; SameSite=Lax; Secure`;
 
-  // 2. URL पैरामीटर्स के साथ वापस OTT या संदर्भित साइट पर भेजें
+  // 2. URL Query String तैयार करें (सफारी और मोबाइल ब्राउज़र्स के लिए 100% सेफ)
   const urlParams = new URLSearchParams(window.location.search);
   const redirectUrl = urlParams.get('redirect_url') || urlParams.get('redirect');
 
@@ -54,7 +55,10 @@ function onLoginSuccess(user, userData) {
       finalUrl.searchParams.set('email', email);
       finalUrl.searchParams.set('name', name);
       finalUrl.searchParams.set('uid', uid);
-      window.location.href = finalUrl.toString();
+      finalUrl.searchParams.set('safari_auth', 'true');
+      
+      // सफारी में बिना बैक-कैश के क्लीन रीडायरेक्ट
+      window.location.replace(finalUrl.toString());
       return true;
     } catch (e) {
       window.location.href = redirectUrl;
@@ -234,7 +238,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /* ------------------------------------------------------------------------
-     D. FIREBASE AUTH STATE OBSERVER (ऑटोमैटिक कुकी & रीडायरेक्ट चेक)
+     D. FIREBASE AUTH STATE OBSERVER
      ------------------------------------------------------------------------ */
   auth.onAuthStateChanged(async (user) => {
     if (user) {
@@ -251,7 +255,7 @@ document.addEventListener("DOMContentLoaded", () => {
         // कुकी सेट करें और चेक करें कि क्या रीडायरेक्ट करना है
         const isRedirected = onLoginSuccess(user, currentUserData);
 
-        // अगर रीडायरेक्ट URL नहीं है, तो लोकल प्रोफाइल कार्ड दिखाएं
+        // अगर कोई redirect_url नहीं दिया गया है, तो लोकल प्रोफाइल कार्ड दिखाएं
         if (!isRedirected) {
           populateProfileFields(currentUserData);
           switchToProfileView();
@@ -392,7 +396,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         alert("LUROVA Account created successfully!");
 
-        // कुकी सेट करें और सब-डोमेन रीडायरेक्ट लागू करें
+        // सफारी सेफ रीडायरेक्ट और कुकी एग्जीक्यूशन
         const isRedirected = onLoginSuccess(user, currentUserData);
         if (!isRedirected) {
           populateProfileFields(currentUserData);
@@ -461,7 +465,7 @@ document.addEventListener("DOMContentLoaded", () => {
             currentUserData = doc.data();
           }
 
-          // कुकी सेट करें और सब-डोमेन रीडायरेक्ट लागू करें
+          // सफारी सेफ रीडायरेक्ट और कुकी एग्जीक्यूशन
           const isRedirected = onLoginSuccess(user, currentUserData);
 
           if (!isRedirected) {
