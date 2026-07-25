@@ -18,7 +18,7 @@ const db = firebase.firestore();
 // Set Auth Persistence to LOCAL
 auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
 
-// Initialize EmailJS (Optional: Replace with your actual EmailJS Public Key if used)
+// Initialize EmailJS (Optional: Replace with your actual Public Key if used)
 (function() {
     if (window.emailjs) {
         emailjs.init("YOUR_EMAILJS_PUBLIC_KEY");
@@ -26,7 +26,7 @@ auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
 })();
 
 // ==========================================================================
-// REDIRECT HELPER FUNCTION (लॉगिन सफलता के बाद यूज़र को रीडायरेक्ट करने के लिए)
+// REDIRECT HELPER FUNCTION
 // ==========================================================================
 function handlePostLoginRedirect(user, userData) {
   const urlParams = new URLSearchParams(window.location.search);
@@ -36,7 +36,6 @@ function handlePostLoginRedirect(user, userData) {
     try {
       const finalUrl = new URL(redirectUrl);
       
-      // नाम निर्धारित करें (Firestore डाटा या Auth डिस्प्ले नेम से)
       let name = "";
       if (userData && userData.firstName) {
         name = `${userData.firstName} ${userData.lastName || ''}`.trim();
@@ -44,19 +43,17 @@ function handlePostLoginRedirect(user, userData) {
         name = user.displayName || (user.email ? user.email.split('@')[0] : '');
       }
 
-      // यूआरएल में पैरामीटर्स जोड़ें
       finalUrl.searchParams.set('email', user.email || '');
       finalUrl.searchParams.set('name', name);
       finalUrl.searchParams.set('uid', user.uid || '');
 
-      // यूज़र को रीडायरेक्ट करें
       window.location.href = finalUrl.toString();
-      return true; // रीडायरेक्ट हो गया
+      return true;
     } catch (error) {
       console.error("Invalid Redirect URL:", error);
     }
   }
-  return false; // कोई रीडायरेक्ट यूआरएल नहीं मिला
+  return false;
 }
 
 // Helper Function for Auto Email Notification
@@ -111,6 +108,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const passwordMatchError = document.getElementById("passwordMatchError");
 
   // Profile Elements
+  const profileBackBtn = document.getElementById("profileBackBtn");
   const userAvatar = document.getElementById("userAvatar");
   const profileFullName = document.getElementById("profileFullName");
   const profileEmail = document.getElementById("profileEmail");
@@ -150,7 +148,29 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /* ------------------------------------------------------------------------
-     B. FORGOT PASSWORD MODAL & RESET HANDLER
+     B. PROFILE BACK BUTTON NAVIGATION HANDLER
+     ------------------------------------------------------------------------ */
+  if (profileBackBtn) {
+    profileBackBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+
+      // 1. Check if user arrived from an external referrer URL
+      if (document.referrer && document.referrer !== window.location.href) {
+        window.location.href = document.referrer;
+      } 
+      // 2. Check if previous history exists
+      else if (window.history.length > 1) {
+        window.history.back();
+      } 
+      // 3. Fallback redirect
+      else {
+        switchToAuthView();
+      }
+    });
+  }
+
+  /* ------------------------------------------------------------------------
+     C. FORGOT PASSWORD MODAL & RESET HANDLER
      ------------------------------------------------------------------------ */
   if (forgotPasswordLink && forgotModal) {
     forgotPasswordLink.addEventListener("click", (e) => {
@@ -208,7 +228,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /* ------------------------------------------------------------------------
-     C. FIREBASE AUTH STATE OBSERVER (ऑटोमैटिक रीडायरेक्ट चेक के साथ)
+     D. FIREBASE AUTH STATE OBSERVER
      ------------------------------------------------------------------------ */
   auth.onAuthStateChanged(async (user) => {
     if (user) {
@@ -222,10 +242,8 @@ document.addEventListener("DOMContentLoaded", () => {
           currentUserData = await handleNewSocialUserProfile(user);
         }
 
-        // चेक करें कि क्या यूज़र को किसी दूसरे Subdomain (जैसे OTT/Ads) पर भेजना है
         const isRedirected = handlePostLoginRedirect(user, currentUserData);
 
-        // अगर रीडायरेक्ट URL नहीं है, तो सामान्य प्रोफाइल दिखाएं
         if (!isRedirected) {
           populateProfileFields(currentUserData);
           switchToProfileView();
@@ -240,7 +258,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   /* ------------------------------------------------------------------------
-     D. SOCIAL LOGINS (GOOGLE & APPLE)
+     E. SOCIAL LOGINS (GOOGLE & APPLE)
      ------------------------------------------------------------------------ */
   async function handleNewSocialUserProfile(user) {
     const nameParts = (user.displayName || "").split(" ");
@@ -295,7 +313,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (appleSignupBtn) appleSignupBtn.addEventListener("click", handleAppleAuth);
 
   /* ------------------------------------------------------------------------
-     E. LIVE PASSWORD MATCH VALIDATION
+     F. LIVE PASSWORD MATCH VALIDATION
      ------------------------------------------------------------------------ */
   function validatePasswords() {
     if (!signupPassword || !confirmPassword || !passwordMatchError) return true;
@@ -315,7 +333,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /* ------------------------------------------------------------------------
-     F. USER REGISTRATION HANDLER
+     G. USER REGISTRATION HANDLER
      ------------------------------------------------------------------------ */
   if (signupForm) {
     signupForm.addEventListener("submit", async (e) => {
@@ -347,7 +365,6 @@ document.addEventListener("DOMContentLoaded", () => {
         const userCredential = await auth.createUserWithEmailAndPassword(email, password);
         const user = userCredential.user;
 
-        // Send Email Verification
         await user.sendEmailVerification();
 
         const userData = {
@@ -367,7 +384,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
         alert("LUROVA Account created successfully!");
 
-        // लॉगिन और रजिस्ट्रेशन के बाद रीडायरेक्ट चेक
         const isRedirected = handlePostLoginRedirect(user, currentUserData);
         if (!isRedirected) {
           populateProfileFields(currentUserData);
@@ -386,7 +402,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /* ------------------------------------------------------------------------
-     G. USER LOGIN HANDLER (WITH SUCCESS REDIRECT)
+     H. USER LOGIN HANDLER
      ------------------------------------------------------------------------ */
   if (loginForm) {
     loginForm.addEventListener("submit", async (e) => {
@@ -436,7 +452,6 @@ document.addEventListener("DOMContentLoaded", () => {
             currentUserData = doc.data();
           }
 
-          // --- LOGIN SUCCESS REDIRECT LOGIC ---
           const isRedirected = handlePostLoginRedirect(user, currentUserData);
 
           if (!isRedirected) {
@@ -457,7 +472,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /* ------------------------------------------------------------------------
-     H. POPULATE & RENDER PROFILE FIELDS
+     I. POPULATE & RENDER PROFILE FIELDS
      ------------------------------------------------------------------------ */
   function populateProfileFields(data) {
     if (!data) return;
@@ -503,7 +518,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /* ------------------------------------------------------------------------
-     I. EDIT, SAVE, & CANCEL PROFILE DETAILS
+     J. EDIT, SAVE, & CANCEL PROFILE DETAILS
      ------------------------------------------------------------------------ */
   if (editToggleBtn) {
     editToggleBtn.addEventListener("click", () => {
@@ -566,7 +581,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /* ------------------------------------------------------------------------
-     J. LOGOUT & DELETE ACCOUNT
+     K. LOGOUT & DELETE ACCOUNT
      ------------------------------------------------------------------------ */
   if (logoutBtn) {
     logoutBtn.addEventListener("click", async () => {
