@@ -265,7 +265,6 @@ body.profile-view-active {
   gap: 10px;
 }
 
-/* Reduced gap specifically for login form elements */
 .auth-form.tight-gap { gap: 4px; }
 
 .input-row { display: flex; gap: 10px; }
@@ -273,7 +272,7 @@ body.profile-view-active {
 .input-group {
   display: flex;
   flex-direction: column;
-  gap: 2px; /* Minimal gap between label and input box */
+  gap: 2px;
   flex: 1;
 }
 
@@ -290,7 +289,7 @@ input[type="password"],
 input[type="date"],
 select {
   width: 100%;
-  padding: 8px 12px; /* Slimmer vertical input padding */
+  padding: 8px 12px;
   background: var(--input-bg);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
@@ -381,7 +380,7 @@ input:disabled, select:disabled {
 .action-buttons-row {
   display: flex;
   gap: 10px;
-  margin-top: 4px; /* Minimal gap above login button */
+  margin-top: 4px;
 }
 
 .btn {
@@ -550,7 +549,7 @@ input:disabled, select:disabled {
 .close-modal-btn:hover { color: var(--text-dark); }
 
 /* ==========================================================================
-   PROFILE PAGE CARD
+   PROFILE PAGE CARD & BACK BUTTON STYLING
    ========================================================================== */
 .profile-card {
   background: #ffffff;
@@ -560,6 +559,42 @@ input:disabled, select:disabled {
   margin: 0 auto;
   box-shadow: 0 20px 40px rgba(15, 23, 42, 0.08), 0 1px 3px rgba(0, 0, 0, 0.05);
   border: 1px solid var(--border-color);
+}
+
+.profile-nav-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  margin-bottom: 16px;
+}
+
+.btn-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #f1f5f9;
+  border: 1px solid var(--border-color);
+  color: var(--text-dark);
+  font-size: 0.82rem;
+  font-weight: 700;
+  padding: 8px 14px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.25s var(--transition-smooth);
+}
+
+.btn-back:hover, .btn-back:active {
+  background: #e2e8f0;
+  border-color: #cbd5e1;
+  transform: translateX(-3px);
+}
+
+.btn-back svg {
+  transition: transform 0.25s ease;
+}
+
+.btn-back:hover svg {
+  transform: translateX(-2px);
 }
 
 .profile-header {
@@ -780,7 +815,7 @@ input:disabled, select:disabled {
   }
 
   .auth-form.tight-gap {
-    gap: 6px; /* Tight vertical gap on mobile */
+    gap: 6px;
   }
 
   .social-login-grid {
@@ -811,7 +846,7 @@ input:disabled, select:disabled {
   input[type="date"],
   select {
     min-height: 44px;
-    font-size: 16px; /* Prevents auto-zoom on mobile iOS Safari */
+    font-size: 16px;
     border-radius: 10px;
     padding: 10px 12px;
   }
