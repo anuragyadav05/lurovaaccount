@@ -15,8 +15,60 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-// Set Auth Persistence to LOCAL (keeps user signed in across browser sessions/mobile refreshes)
+// Set Auth Persistence to LOCAL
 auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+
+// Initialize EmailJS (Optional: Replace with your actual EmailJS Public Key if used)
+(function() {
+    if (window.emailjs) {
+        emailjs.init("YOUR_EMAILJS_PUBLIC_KEY");
+    }
+})();
+
+// ==========================================================================
+// REDIRECT HELPER FUNCTION (लॉगिन सफलता के बाद यूज़र को रीडायरेक्ट करने के लिए)
+// ==========================================================================
+function handlePostLoginRedirect(user, userData) {
+  const urlParams = new URLSearchParams(window.location.search);
+  const redirectUrl = urlParams.get('redirect_url') || urlParams.get('redirect');
+
+  if (redirectUrl) {
+    try {
+      const finalUrl = new URL(redirectUrl);
+      
+      // नाम निर्धारित करें (Firestore डाटा या Auth डिस्प्ले नेम से)
+      let name = "";
+      if (userData && userData.firstName) {
+        name = `${userData.firstName} ${userData.lastName || ''}`.trim();
+      } else {
+        name = user.displayName || (user.email ? user.email.split('@')[0] : '');
+      }
+
+      // यूआरएल में पैरामीटर्स जोड़ें
+      finalUrl.searchParams.set('email', user.email || '');
+      finalUrl.searchParams.set('name', name);
+      finalUrl.searchParams.set('uid', user.uid || '');
+
+      // यूज़र को रीडायरेक्ट करें
+      window.location.href = finalUrl.toString();
+      return true; // रीडायरेक्ट हो गया
+    } catch (error) {
+      console.error("Invalid Redirect URL:", error);
+    }
+  }
+  return false; // कोई रीडायरेक्ट यूआरएल नहीं मिला
+}
+
+// Helper Function for Auto Email Notification
+async function sendAutoEmail(templateId, templateParams) {
+  if (!window.emailjs) return;
+  const SERVICE_ID = "YOUR_EMAILJS_SERVICE_ID";
+  try {
+    await emailjs.send(SERVICE_ID, templateId, templateParams);
+  } catch (error) {
+    console.error("Failed to send automated email:", error);
+  }
+}
 
 // ==========================================================================
 // 2. MAIN APPLICATION LOGIC
@@ -53,12 +105,12 @@ document.addEventListener("DOMContentLoaded", () => {
   const signupForm = document.getElementById("signupForm");
   const profileDetailsForm = document.getElementById("profileDetailsForm");
 
-  // Password Input Elements & Error Messaging
+  // Password Inputs
   const signupPassword = document.getElementById("signupPassword");
   const confirmPassword = document.getElementById("confirmPassword");
   const passwordMatchError = document.getElementById("passwordMatchError");
 
-  // Profile Header & Form Input Elements
+  // Profile Elements
   const userAvatar = document.getElementById("userAvatar");
   const profileFullName = document.getElementById("profileFullName");
   const profileEmail = document.getElementById("profileEmail");
@@ -76,7 +128,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const logoutBtn = document.getElementById("logoutBtn");
   const deleteAccountBtn = document.getElementById("deleteAccountBtn");
 
-  // Global State Variable
   let currentUserData = null;
 
   /* ------------------------------------------------------------------------
@@ -141,7 +192,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       try {
         await auth.sendPasswordResetEmail(resetEmail);
-        alert("Password reset email sent! Please check your email inbox (and spam folder) for the reset link.");
+        alert("Password reset email sent! Please check your email inbox for the link.");
         forgotModal.classList.add("hidden");
         forgotPasswordForm.reset();
       } catch (error) {
@@ -157,7 +208,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /* ------------------------------------------------------------------------
-     C. FIREBASE AUTH STATE OBSERVER (FETCH USER & POPULATE FIELDS)
+     C. FIREBASE AUTH STATE OBSERVER (ऑटोमैटिक रीडायरेक्ट चेक के साथ)
      ------------------------------------------------------------------------ */
   auth.onAuthStateChanged(async (user) => {
     if (user) {
@@ -171,8 +222,14 @@ document.addEventListener("DOMContentLoaded", () => {
           currentUserData = await handleNewSocialUserProfile(user);
         }
 
-        populateProfileFields(currentUserData);
-        switchToProfileView();
+        // चेक करें कि क्या यूज़र को किसी दूसरे Subdomain (जैसे OTT/Ads) पर भेजना है
+        const isRedirected = handlePostLoginRedirect(user, currentUserData);
+
+        // अगर रीडायरेक्ट URL नहीं है, तो सामान्य प्रोफाइल दिखाएं
+        if (!isRedirected) {
+          populateProfileFields(currentUserData);
+          switchToProfileView();
+        }
       } catch (error) {
         console.error("Error fetching user data from Firestore:", error);
       }
@@ -183,7 +240,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   /* ------------------------------------------------------------------------
-     D. SOCIAL LOGINS (GOOGLE & APPLE - MOBILE POPUP / REDIRECT SAFE)
+     D. SOCIAL LOGINS (GOOGLE & APPLE)
      ------------------------------------------------------------------------ */
   async function handleNewSocialUserProfile(user) {
     const nameParts = (user.displayName || "").split(" ");
@@ -288,10 +345,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
       try {
         const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-        const uid = userCredential.user.uid;
+        const user = userCredential.user;
+
+        // Send Email Verification
+        await user.sendEmailVerification();
 
         const userData = {
-          uid: uid,
+          uid: user.uid,
           firstName: firstName,
           lastName: lastName,
           email: email,
@@ -302,8 +362,17 @@ document.addEventListener("DOMContentLoaded", () => {
           createdAt: firebase.firestore.FieldValue.serverTimestamp()
         };
 
-        await db.collection("users").doc(uid).set(userData);
+        await db.collection("users").doc(user.uid).set(userData);
+        currentUserData = userData;
+
         alert("LUROVA Account created successfully!");
+
+        // लॉगिन और रजिस्ट्रेशन के बाद रीडायरेक्ट चेक
+        const isRedirected = handlePostLoginRedirect(user, currentUserData);
+        if (!isRedirected) {
+          populateProfileFields(currentUserData);
+          switchToProfileView();
+        }
       } catch (error) {
         alert("Registration Error: " + error.message);
       } finally {
@@ -317,7 +386,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /* ------------------------------------------------------------------------
-     G. USER LOGIN HANDLER (EMAIL / PHONE SUPPORT)
+     G. USER LOGIN HANDLER (WITH SUCCESS REDIRECT)
      ------------------------------------------------------------------------ */
   if (loginForm) {
     loginForm.addEventListener("submit", async (e) => {
@@ -359,16 +428,22 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         const userCredential = await auth.signInWithEmailAndPassword(targetEmail, password);
+        const user = userCredential.user;
 
-        if (userCredential.user) {
-          const doc = await db.collection("users").doc(userCredential.user.uid).get();
+        if (user) {
+          const doc = await db.collection("users").doc(user.uid).get();
           if (doc.exists) {
             currentUserData = doc.data();
+          }
+
+          // --- LOGIN SUCCESS REDIRECT LOGIC ---
+          const isRedirected = handlePostLoginRedirect(user, currentUserData);
+
+          if (!isRedirected) {
             populateProfileFields(currentUserData);
+            switchToProfileView();
           }
         }
-
-        switchToProfileView();
       } catch (error) {
         alert("Login Error: " + error.message);
       } finally {
@@ -515,7 +590,7 @@ document.addEventListener("DOMContentLoaded", () => {
           await user.delete();
           alert("Your LUROVA Account has been permanently deleted.");
         } catch (error) {
-          alert("Delete Error: " + error.message + " (Please log out and log back in before deleting your account for security confirmation).");
+          alert("Delete Error: " + error.message);
         }
       }
     });
