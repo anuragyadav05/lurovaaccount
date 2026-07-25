@@ -26,37 +26,46 @@ auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
 })();
 
 // ==========================================================================
-// REDIRECT HELPER FUNCTION
+// SHARED DOMAIN COOKIE & LOGIN SUCCESS REDIRECT FUNCTION
 // ==========================================================================
-function handlePostLoginRedirect(user, userData) {
+function onLoginSuccess(user, userData) {
+  // नाम निर्धारित करें (Firestore डाटा या Auth डिस्प्ले नेम से)
+  let name = "";
+  if (userData && userData.firstName) {
+    name = `${userData.firstName} ${userData.lastName || ''}`.trim();
+  } else {
+    name = user.displayName || (user.email ? user.email.split('@')[0] : 'User');
+  }
+
+  const email = user.email || '';
+  const uid = user.uid || '';
+
+  // 1. Shared Root Domain Cookie सेट करें (.lurova.life ताकि ott.lurova.life इसे तुरंत पढ़ सके)
+  const cookiePayload = JSON.stringify({ email, name, uid });
+  document.cookie = `lurova_user=${encodeURIComponent(cookiePayload)}; domain=.lurova.life; path=/; max-age=2592000; SameSite=Lax; Secure`;
+
+  // 2. URL पैरामीटर्स के साथ वापस OTT या संदर्भित साइट पर भेजें
   const urlParams = new URLSearchParams(window.location.search);
   const redirectUrl = urlParams.get('redirect_url') || urlParams.get('redirect');
 
   if (redirectUrl) {
     try {
       const finalUrl = new URL(redirectUrl);
-      
-      let name = "";
-      if (userData && userData.firstName) {
-        name = `${userData.firstName} ${userData.lastName || ''}`.trim();
-      } else {
-        name = user.displayName || (user.email ? user.email.split('@')[0] : '');
-      }
-
-      finalUrl.searchParams.set('email', user.email || '');
+      finalUrl.searchParams.set('email', email);
       finalUrl.searchParams.set('name', name);
-      finalUrl.searchParams.set('uid', user.uid || '');
-
+      finalUrl.searchParams.set('uid', uid);
       window.location.href = finalUrl.toString();
       return true;
-    } catch (error) {
-      console.error("Invalid Redirect URL:", error);
+    } catch (e) {
+      window.location.href = redirectUrl;
+      return true;
     }
   }
-  return false;
+
+  return false; // अगर कोई redirect parameter नहीं दिया गया है
 }
 
-// Helper Function for Auto Email Notification
+// Auto Email Notification Helper (Optional)
 async function sendAutoEmail(templateId, templateParams) {
   if (!window.emailjs) return;
   const SERVICE_ID = "YOUR_EMAILJS_SERVICE_ID";
@@ -154,15 +163,12 @@ document.addEventListener("DOMContentLoaded", () => {
     profileBackBtn.addEventListener("click", (e) => {
       e.preventDefault();
 
-      // 1. Check if user arrived from an external referrer URL
       if (document.referrer && document.referrer !== window.location.href) {
         window.location.href = document.referrer;
       } 
-      // 2. Check if previous history exists
       else if (window.history.length > 1) {
         window.history.back();
       } 
-      // 3. Fallback redirect
       else {
         switchToAuthView();
       }
@@ -228,7 +234,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /* ------------------------------------------------------------------------
-     D. FIREBASE AUTH STATE OBSERVER
+     D. FIREBASE AUTH STATE OBSERVER (ऑटोमैटिक कुकी & रीडायरेक्ट चेक)
      ------------------------------------------------------------------------ */
   auth.onAuthStateChanged(async (user) => {
     if (user) {
@@ -242,8 +248,10 @@ document.addEventListener("DOMContentLoaded", () => {
           currentUserData = await handleNewSocialUserProfile(user);
         }
 
-        const isRedirected = handlePostLoginRedirect(user, currentUserData);
+        // कुकी सेट करें और चेक करें कि क्या रीडायरेक्ट करना है
+        const isRedirected = onLoginSuccess(user, currentUserData);
 
+        // अगर रीडायरेक्ट URL नहीं है, तो लोकल प्रोफाइल कार्ड दिखाएं
         if (!isRedirected) {
           populateProfileFields(currentUserData);
           switchToProfileView();
@@ -384,7 +392,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
         alert("LUROVA Account created successfully!");
 
-        const isRedirected = handlePostLoginRedirect(user, currentUserData);
+        // कुकी सेट करें और सब-डोमेन रीडायरेक्ट लागू करें
+        const isRedirected = onLoginSuccess(user, currentUserData);
         if (!isRedirected) {
           populateProfileFields(currentUserData);
           switchToProfileView();
@@ -452,7 +461,8 @@ document.addEventListener("DOMContentLoaded", () => {
             currentUserData = doc.data();
           }
 
-          const isRedirected = handlePostLoginRedirect(user, currentUserData);
+          // कुकी सेट करें और सब-डोमेन रीडायरेक्ट लागू करें
+          const isRedirected = onLoginSuccess(user, currentUserData);
 
           if (!isRedirected) {
             populateProfileFields(currentUserData);
@@ -586,6 +596,8 @@ document.addEventListener("DOMContentLoaded", () => {
   if (logoutBtn) {
     logoutBtn.addEventListener("click", async () => {
       try {
+        // Shared domain cookie को भी डिलीट करें
+        document.cookie = "lurova_user=; domain=.lurova.life; path=/; max-age=0;";
         await auth.signOut();
         disableEditMode();
       } catch (error) {
@@ -601,6 +613,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (confirm("Are you sure you want to delete your LUROVA Account? This action cannot be undone.")) {
         try {
+          document.cookie = "lurova_user=; domain=.lurova.life; path=/; max-age=0;";
           await db.collection("users").doc(user.uid).delete();
           await user.delete();
           alert("Your LUROVA Account has been permanently deleted.");
