@@ -18,6 +18,9 @@ const db = firebase.firestore();
 // Set Auth Persistence to LOCAL (Session stays across browser restarts)
 auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
 
+// Global variable for Phone Confirmation Result
+let phoneConfirmationResult = null;
+
 // Initialize EmailJS Browser SDK (Optional)
 (function() {
     if (window.emailjs) {
@@ -100,7 +103,7 @@ function onLoginSuccess(user, userData) {
     }
   }
 
-  return false; // Returns false if no redirect parameter was provided
+  return false;
 }
 
 // ==========================================================================
@@ -138,6 +141,17 @@ document.addEventListener("DOMContentLoaded", () => {
   const googleSignupBtn = document.getElementById("googleSignupBtn");
   const appleLoginBtn = document.getElementById("appleLoginBtn");
   const appleSignupBtn = document.getElementById("appleSignupBtn");
+  const facebookLoginBtn = document.getElementById("facebookLoginBtn");
+  const facebookSignupBtn = document.getElementById("facebookSignupBtn");
+
+  // Phone Auth Elements
+  const loginWithPhoneOtpBtn = document.getElementById("loginWithPhoneOtpBtn");
+  const phoneOtpModal = document.getElementById("phoneOtpModal");
+  const closePhoneOtpModal = document.getElementById("closePhoneOtpModal");
+  const sendOtpBtn = document.getElementById("sendOtpBtn");
+  const verifyOtpBtn = document.getElementById("verifyOtpBtn");
+  const phoneInputStep = document.getElementById("phoneInputStep");
+  const otpInputStep = document.getElementById("otpInputStep");
 
   // Forgot Password Elements
   const forgotPasswordLink = document.getElementById("forgotPasswordLink");
@@ -165,7 +179,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const signupForm = document.getElementById("signupForm");
   const profileDetailsForm = document.getElementById("profileDetailsForm");
 
-  // Password Validation Inputs
+  // Password Inputs
   const signupPassword = document.getElementById("signupPassword");
   const confirmPassword = document.getElementById("confirmPassword");
   const passwordMatchError = document.getElementById("passwordMatchError");
@@ -323,7 +337,135 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /* ------------------------------------------------------------------------
-     E. PAYMENT MODALS & CARD/UPI SAVING (FIRESTORE)
+     E. PHONE SMS OTP AUTHENTICATION (FIREBASE RECAPTCHA)
+     ------------------------------------------------------------------------ */
+  // Initialize Invisible reCAPTCHA
+  window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
+    'size': 'invisible',
+    'callback': (response) => {
+      // reCAPTCHA solved
+    }
+  });
+
+  if (loginWithPhoneOtpBtn && phoneOtpModal) {
+    loginWithPhoneOtpBtn.addEventListener("click", () => {
+      phoneOtpModal.classList.remove("hidden");
+      phoneInputStep.classList.remove("hidden");
+      otpInputStep.classList.add("hidden");
+    });
+  }
+
+  if (closePhoneOtpModal && phoneOtpModal) {
+    closePhoneOtpModal.addEventListener("click", () => {
+      phoneOtpModal.classList.add("hidden");
+    });
+  }
+
+  // Step 1: Send SMS OTP
+  if (sendOtpBtn) {
+    sendOtpBtn.addEventListener("click", async () => {
+      const phoneNumber = document.getElementById("phoneAuthNumber").value.trim();
+
+      if (!phoneNumber || phoneNumber.length < 10) {
+        alert("Please enter a valid phone number including country code (e.g. +919876543210).");
+        return;
+      }
+
+      sendOtpBtn.disabled = true;
+      sendOtpBtn.querySelector("span").textContent = "Sending SMS...";
+
+      try {
+        const appVerifier = window.recaptchaVerifier;
+        phoneConfirmationResult = await auth.signInWithPhoneNumber(phoneNumber, appVerifier);
+        
+        phoneInputStep.classList.add("hidden");
+        otpInputStep.classList.remove("hidden");
+        alert("OTP sent to " + phoneNumber);
+      } catch (error) {
+        alert("SMS Send Error: " + error.message);
+        window.recaptchaVerifier.render().then(widgetId => grecaptcha.reset(widgetId));
+      } finally {
+        sendOtpBtn.disabled = false;
+        sendOtpBtn.querySelector("span").textContent = "Send SMS OTP";
+      }
+    });
+  }
+
+  // Step 2: Verify SMS OTP
+  if (verifyOtpBtn) {
+    verifyOtpBtn.addEventListener("click", async () => {
+      const code = document.getElementById("otpCode").value.trim();
+
+      if (!code || code.length !== 6) {
+        alert("Please enter the 6-digit OTP code received via SMS.");
+        return;
+      }
+
+      verifyOtpBtn.disabled = true;
+      verifyOtpBtn.querySelector("span").textContent = "Verifying...";
+
+      try {
+        const result = await phoneConfirmationResult.confirm(code);
+        const user = result.user;
+
+        phoneOtpModal.classList.add("hidden");
+
+        const doc = await db.collection("users").doc(user.uid).get();
+        if (doc.exists) {
+          currentUserData = doc.data();
+        } else {
+          currentUserData = await handleNewSocialUserProfile(user);
+        }
+
+        const isRedirected = onLoginSuccess(user, currentUserData);
+        if (!isRedirected) {
+          populateProfileFields(currentUserData);
+          switchToProfileView();
+        }
+      } catch (error) {
+        alert("OTP Verification Error: " + error.message);
+      } finally {
+        verifyOtpBtn.disabled = false;
+        verifyOtpBtn.querySelector("span").textContent = "Verify & Sign In";
+      }
+    });
+  }
+
+  /* ------------------------------------------------------------------------
+     F. FACEBOOK SOCIAL LOGIN
+     ------------------------------------------------------------------------ */
+  async function handleFacebookAuth() {
+    const provider = new firebase.auth.FacebookAuthProvider();
+    try {
+      const result = await auth.signInWithPopup(provider);
+      const user = result.user;
+
+      const doc = await db.collection("users").doc(user.uid).get();
+      if (doc.exists) {
+        currentUserData = doc.data();
+      } else {
+        currentUserData = await handleNewSocialUserProfile(user);
+      }
+
+      const isRedirected = onLoginSuccess(user, currentUserData);
+      if (!isRedirected) {
+        populateProfileFields(currentUserData);
+        switchToProfileView();
+      }
+    } catch (error) {
+      if (error.code === 'auth/popup-blocked' || error.code === 'auth/popup-closed-by-user') {
+        auth.signInWithRedirect(provider);
+      } else {
+        alert("Facebook Auth Error: " + error.message);
+      }
+    }
+  }
+
+  if (facebookLoginBtn) facebookLoginBtn.addEventListener("click", handleFacebookAuth);
+  if (facebookSignupBtn) facebookSignupBtn.addEventListener("click", handleFacebookAuth);
+
+  /* ------------------------------------------------------------------------
+     G. PAYMENT MODALS & CARD/UPI SAVING (FIRESTORE)
      ------------------------------------------------------------------------ */
   if (openCardModalBtn) openCardModalBtn.addEventListener("click", () => cardModal.classList.remove("hidden"));
   if (openUpiModalBtn) openUpiModalBtn.addEventListener("click", () => upiModal.classList.remove("hidden"));
@@ -472,7 +614,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }).join('');
   }
 
-  // Global Delete Saved Payment Method Handler
+  // Delete Saved Payment Method
   window.deletePaymentMethod = async function(id) {
     const user = auth.currentUser;
     if (!user || !confirm("Are you sure you want to remove this saved payment method?")) return;
@@ -491,7 +633,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
-  // Render Transaction History or Clean Empty Message
+  // Render Transaction History
   function renderTransactionHistory(transactions) {
     if (!transactionHistoryContainer) return;
 
@@ -529,7 +671,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /* ------------------------------------------------------------------------
-     F. FIREBASE AUTH STATE OBSERVER
+     H. FIREBASE AUTH STATE OBSERVER
      ------------------------------------------------------------------------ */
   auth.onAuthStateChanged(async (user) => {
     if (user) {
@@ -563,14 +705,13 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   /* ------------------------------------------------------------------------
-     G. ACCURATE DEVICE & OS PARSING
+     I. ACCURATE DEVICE & OS PARSING
      ------------------------------------------------------------------------ */
   function parseAccurateUserAgent() {
     const ua = navigator.userAgent;
     let browser = "Web Browser";
     let os = "Desktop/Mobile";
 
-    // Detect OS
     if (ua.indexOf("Win") !== -1) os = "Windows PC";
     else if (ua.indexOf("Mac") !== -1) os = "macOS Device";
     else if (ua.indexOf("Android") !== -1) os = "Android Phone";
@@ -578,7 +719,6 @@ document.addEventListener("DOMContentLoaded", () => {
     else if (ua.indexOf("iPad") !== -1) os = "Apple iPad";
     else if (ua.indexOf("Linux") !== -1) os = "Linux Workstation";
 
-    // Detect Browser
     if (ua.indexOf("Chrome") !== -1 && ua.indexOf("Edg") === -1 && ua.indexOf("OPR") === -1) browser = "Google Chrome";
     else if (ua.indexOf("Safari") !== -1 && ua.indexOf("Chrome") === -1) browser = "Apple Safari";
     else if (ua.indexOf("Edg") !== -1) browser = "Microsoft Edge";
@@ -618,7 +758,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /* ------------------------------------------------------------------------
-     H. SOCIAL LOGINS (GOOGLE & APPLE)
+     J. GOOGLE & APPLE AUTH
      ------------------------------------------------------------------------ */
   async function handleNewSocialUserProfile(user) {
     const nameParts = (user.displayName || "").split(" ");
@@ -675,7 +815,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (appleSignupBtn) appleSignupBtn.addEventListener("click", handleAppleAuth);
 
   /* ------------------------------------------------------------------------
-     I. LIVE PASSWORD MATCH VALIDATION & FORM SUBMISSIONS
+     K. LIVE PASSWORD VALIDATION & FORM SUBMISSIONS
      ------------------------------------------------------------------------ */
   function validatePasswords() {
     if (!signupPassword || !confirmPassword || !passwordMatchError) return true;
@@ -822,7 +962,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /* ------------------------------------------------------------------------
-     J. POPULATE & RENDER PROFILE FIELDS
+     L. POPULATE & RENDER PROFILE FIELDS
      ------------------------------------------------------------------------ */
   function populateProfileFields(data) {
     if (!data) return;
@@ -867,7 +1007,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /* ------------------------------------------------------------------------
-     K. EDIT, SAVE, & CANCEL PROFILE DETAILS
+     M. EDIT, SAVE, & CANCEL PROFILE DETAILS
      ------------------------------------------------------------------------ */
   if (editToggleBtn) {
     editToggleBtn.addEventListener("click", () => {
@@ -945,7 +1085,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /* ------------------------------------------------------------------------
-     L. LOGOUT & DELETE ACCOUNT
+     N. LOGOUT & DELETE ACCOUNT
      ------------------------------------------------------------------------ */
   if (logoutBtn) {
     logoutBtn.addEventListener("click", async () => {
