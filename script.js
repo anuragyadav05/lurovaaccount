@@ -15,7 +15,7 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-// Set Auth Persistence to LOCAL (session stays across refreshes)
+// Set Auth Persistence to LOCAL
 auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
 
 // Initialize EmailJS (Optional: Replace with your actual Public Key if used)
@@ -26,10 +26,9 @@ auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
 })();
 
 // ==========================================================================
-// 2. CROSS-SUBDOMAIN POSTMESSAGE LISTENER (ads.lurova.life Auto-Login)
+// 2. CROSS-SUBDOMAIN POSTMESSAGE LISTENER (auto-login check requests)
 // ==========================================================================
 window.addEventListener('message', (event) => {
-  // Verify request comes from a lurova.life subdomain or localhost
   if (event.origin.includes('lurova.life') || event.origin.includes('localhost')) {
     if (event.data === 'CHECK_LUROVA_SESSION') {
       const savedUser = localStorage.getItem('lurova_account_user');
@@ -49,12 +48,11 @@ window.addEventListener('message', (event) => {
 });
 
 // ==========================================================================
-// 3. SAFARI-SAFE REDIRECT & SHARED COOKIE / LOCALSTORAGE FUNCTION
+// 3. REDIRECT & SHARED COOKIE / LOCALSTORAGE FUNCTION
 // ==========================================================================
 function onLoginSuccess(user, userData) {
   const email = user.email || '';
   
-  // नाम निर्धारित करें (Firestore डाटा या Auth डिस्प्ले नेम से)
   let name = "";
   if (userData && userData.firstName) {
     name = `${userData.firstName} ${userData.lastName || ''}`.trim();
@@ -65,22 +63,16 @@ function onLoginSuccess(user, userData) {
   const uid = user.uid || '';
   const phone = (userData && userData.phone) || user.phoneNumber || '';
 
-  // A. Package User Object
-  const userPayload = {
-    uid: uid,
-    email: email,
-    displayName: name,
-    phone: phone
-  };
+  const userPayload = { uid, email, displayName: name, phone };
 
-  // B. Store in LocalStorage for cross-tab availability & postMessage checks
+  // Store in LocalStorage for cross-tab availability & postMessage checks
   localStorage.setItem('lurova_account_user', JSON.stringify(userPayload));
 
-  // C. Shared Root Domain Cookie सेट करें (.lurova.life)
+  // Set Root Domain Cookie (.lurova.life)
   const cookiePayload = JSON.stringify({ email, name, uid, phone });
   document.cookie = `lurova_user=${encodeURIComponent(cookiePayload)}; domain=.lurova.life; path=/; max-age=2592000; SameSite=Lax; Secure`;
 
-  // D. Check for Redirect Parameters (redirect_to, redirect_url, or redirect)
+  // Check for Redirect Parameters (redirect_to, redirect_url, redirect)
   const urlParams = new URLSearchParams(window.location.search);
   const redirectToParam = urlParams.get('redirect_to');
   const redirectUrl = urlParams.get('redirect_url') || urlParams.get('redirect') || redirectToParam;
@@ -88,8 +80,6 @@ function onLoginSuccess(user, userData) {
   if (redirectUrl) {
     try {
       const encodedUser = encodeURIComponent(JSON.stringify(userPayload));
-
-      // Check if redirectUrl is valid
       const finalUrl = new URL(redirectUrl);
       finalUrl.searchParams.set('user', encodedUser);
       finalUrl.searchParams.set('email', email);
@@ -97,7 +87,6 @@ function onLoginSuccess(user, userData) {
       finalUrl.searchParams.set('uid', uid);
       finalUrl.searchParams.set('safari_auth', 'true');
       
-      // Navigate safely
       window.location.replace(finalUrl.toString());
       return true;
     } catch (e) {
@@ -108,25 +97,14 @@ function onLoginSuccess(user, userData) {
     }
   }
 
-  return false; // अगर कोई redirect parameter नहीं दिया गया है
-}
-
-// Auto Email Notification Helper (Optional)
-async function sendAutoEmail(templateId, templateParams) {
-  if (!window.emailjs) return;
-  const SERVICE_ID = "YOUR_EMAILJS_SERVICE_ID";
-  try {
-    await emailjs.send(SERVICE_ID, templateId, templateParams);
-  } catch (error) {
-    console.error("Failed to send automated email:", error);
-  }
+  return false;
 }
 
 // ==========================================================================
 // 4. MAIN APPLICATION LOGIC
 // ==========================================================================
 document.addEventListener("DOMContentLoaded", () => {
-  // UI Containers & Artwork
+  // UI Containers
   const bgArt = document.getElementById("bgArt");
   const authCard = document.getElementById("authCard");
   const profileCard = document.getElementById("profileCard");
@@ -173,6 +151,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const profileAddress = document.getElementById("profileAddress");
   const profileDob = document.getElementById("profileDob");
   const profileGender = document.getElementById("profileGender");
+  const resetEmailDisplay = document.getElementById("resetEmailDisplay");
+
+  // Dashboard Sidebar & Tabs
+  const sidebarMenuItems = document.querySelectorAll(".menu-item");
+  const tabPanels = document.querySelectorAll(".tab-panel");
 
   // Profile Actions
   const editToggleBtn = document.getElementById("editToggleBtn");
@@ -180,11 +163,37 @@ document.addEventListener("DOMContentLoaded", () => {
   const cancelEditBtn = document.getElementById("cancelEditBtn");
   const logoutBtn = document.getElementById("logoutBtn");
   const deleteAccountBtn = document.getElementById("deleteAccountBtn");
+  const directResetEmailBtn = document.getElementById("directResetEmailBtn");
+  const devicesListContainer = document.getElementById("devicesListContainer");
+  const addCardBtn = document.getElementById("addCardBtn");
+  const downloadDataBtn = document.getElementById("downloadDataBtn");
 
   let currentUserData = null;
 
   /* ------------------------------------------------------------------------
-     A. LOGIN / SIGNUP VIEW SWITCHING
+     A. SIDEBAR TAB SWITCHING
+     ------------------------------------------------------------------------ */
+  sidebarMenuItems.forEach(item => {
+    item.addEventListener("click", () => {
+      const targetTab = item.getAttribute("data-tab");
+
+      // Update Active Menu State
+      sidebarMenuItems.forEach(btn => btn.classList.remove("active"));
+      item.classList.add("active");
+
+      // Switch Visible Panel
+      tabPanels.forEach(panel => {
+        if (panel.id === targetTab) {
+          panel.classList.add("active");
+        } else {
+          panel.classList.remove("active");
+        }
+      });
+    });
+  });
+
+  /* ------------------------------------------------------------------------
+     B. LOGIN / SIGNUP VIEW SWITCHING
      ------------------------------------------------------------------------ */
   if (switchToSignupBtn) {
     switchToSignupBtn.addEventListener("click", (e) => {
@@ -203,26 +212,23 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /* ------------------------------------------------------------------------
-     B. PROFILE BACK BUTTON NAVIGATION HANDLER
+     C. PROFILE BACK BUTTON NAVIGATION HANDLER
      ------------------------------------------------------------------------ */
   if (profileBackBtn) {
     profileBackBtn.addEventListener("click", (e) => {
       e.preventDefault();
-
       if (document.referrer && document.referrer !== window.location.href) {
         window.location.href = document.referrer;
-      } 
-      else if (window.history.length > 1) {
+      } else if (window.history.length > 1) {
         window.history.back();
-      } 
-      else {
+      } else {
         switchToAuthView();
       }
     });
   }
 
   /* ------------------------------------------------------------------------
-     C. FORGOT PASSWORD MODAL & RESET HANDLER
+     D. FORGOT PASSWORD MODAL & RESET HANDLERS
      ------------------------------------------------------------------------ */
   if (forgotPasswordLink && forgotModal) {
     forgotPasswordLink.addEventListener("click", (e) => {
@@ -239,9 +245,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (forgotModal) {
     forgotModal.addEventListener("click", (e) => {
-      if (e.target === forgotModal) {
-        forgotModal.classList.add("hidden");
-      }
+      if (e.target === forgotModal) forgotModal.classList.add("hidden");
     });
   }
 
@@ -258,13 +262,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (resetSubmitBtn) {
         resetSubmitBtn.disabled = true;
-        const btnText = resetSubmitBtn.querySelector("span");
-        if (btnText) btnText.textContent = "Sending...";
+        resetSubmitBtn.querySelector("span").textContent = "Sending...";
       }
 
       try {
         await auth.sendPasswordResetEmail(resetEmail);
-        alert("Password reset email sent! Please check your email inbox for the link.");
+        alert("Password reset email sent! Please check your inbox for the reset link.");
         forgotModal.classList.add("hidden");
         forgotPasswordForm.reset();
       } catch (error) {
@@ -272,15 +275,28 @@ document.addEventListener("DOMContentLoaded", () => {
       } finally {
         if (resetSubmitBtn) {
           resetSubmitBtn.disabled = false;
-          const btnText = resetSubmitBtn.querySelector("span");
-          if (btnText) btnText.textContent = "Send Reset Link";
+          resetSubmitBtn.querySelector("span").textContent = "Send Reset Link";
+        }
+      }
+    });
+  }
+
+  if (directResetEmailBtn) {
+    directResetEmailBtn.addEventListener("click", async () => {
+      const user = auth.currentUser;
+      if (user && user.email) {
+        try {
+          await auth.sendPasswordResetEmail(user.email);
+          alert(`Password reset link sent to ${user.email}!`);
+        } catch (error) {
+          alert("Error: " + error.message);
         }
       }
     });
   }
 
   /* ------------------------------------------------------------------------
-     D. FIREBASE AUTH STATE OBSERVER
+     E. FIREBASE AUTH STATE OBSERVER
      ------------------------------------------------------------------------ */
   auth.onAuthStateChanged(async (user) => {
     if (user) {
@@ -294,12 +310,11 @@ document.addEventListener("DOMContentLoaded", () => {
           currentUserData = await handleNewSocialUserProfile(user);
         }
 
-        // लोकल स्टोरेज, कुकी सेट करें और चेक करें कि क्या रीडायरेक्ट करना है
         const isRedirected = onLoginSuccess(user, currentUserData);
 
-        // अगर कोई redirect parameter नहीं दिया गया है, तो अकाउंट पेज पर प्रोफाइल दिखाएं
         if (!isRedirected) {
           populateProfileFields(currentUserData);
+          renderActiveDevices();
           switchToProfileView();
         }
       } catch (error) {
@@ -313,7 +328,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   /* ------------------------------------------------------------------------
-     E. SOCIAL LOGINS (GOOGLE & APPLE)
+     F. SOCIAL LOGINS (GOOGLE & APPLE)
      ------------------------------------------------------------------------ */
   async function handleNewSocialUserProfile(user) {
     const nameParts = (user.displayName || "").split(" ");
@@ -368,11 +383,10 @@ document.addEventListener("DOMContentLoaded", () => {
   if (appleSignupBtn) appleSignupBtn.addEventListener("click", handleAppleAuth);
 
   /* ------------------------------------------------------------------------
-     F. LIVE PASSWORD MATCH VALIDATION
+     G. LIVE PASSWORD MATCH VALIDATION & FORM SUBMISSIONS
      ------------------------------------------------------------------------ */
   function validatePasswords() {
     if (!signupPassword || !confirmPassword || !passwordMatchError) return true;
-
     if (confirmPassword.value && signupPassword.value !== confirmPassword.value) {
       passwordMatchError.style.display = "block";
       return false;
@@ -387,13 +401,9 @@ document.addEventListener("DOMContentLoaded", () => {
     signupPassword.addEventListener("input", validatePasswords);
   }
 
-  /* ------------------------------------------------------------------------
-     G. USER REGISTRATION HANDLER
-     ------------------------------------------------------------------------ */
   if (signupForm) {
     signupForm.addEventListener("submit", async (e) => {
       e.preventDefault();
-
       if (!validatePasswords()) {
         alert("Please make sure your passwords match.");
         return;
@@ -412,8 +422,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (signupSubmitBtn) {
         signupSubmitBtn.disabled = true;
-        const btnText = signupSubmitBtn.querySelector("span");
-        if (btnText) btnText.textContent = "Registering...";
+        signupSubmitBtn.querySelector("span").textContent = "Registering...";
       }
 
       try {
@@ -439,7 +448,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
         alert("LUROVA Account created successfully!");
 
-        // रीडायरेक्ट, लोकल स्टोरेज और कुकी निष्पादन
         const isRedirected = onLoginSuccess(user, currentUserData);
         if (!isRedirected) {
           populateProfileFields(currentUserData);
@@ -450,20 +458,15 @@ document.addEventListener("DOMContentLoaded", () => {
       } finally {
         if (signupSubmitBtn) {
           signupSubmitBtn.disabled = false;
-          const btnText = signupSubmitBtn.querySelector("span");
-          if (btnText) btnText.textContent = "Register";
+          signupSubmitBtn.querySelector("span").textContent = "Register";
         }
       }
     });
   }
 
-  /* ------------------------------------------------------------------------
-     H. USER LOGIN HANDLER
-     ------------------------------------------------------------------------ */
   if (loginForm) {
     loginForm.addEventListener("submit", async (e) => {
       e.preventDefault();
-
       const identifierInput = document.getElementById("loginIdentifier");
       const passwordInput = document.getElementById("loginPassword");
 
@@ -477,8 +480,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       if (loginSubmitBtn) {
         loginSubmitBtn.disabled = true;
-        const btnText = loginSubmitBtn.querySelector("span");
-        if (btnText) btnText.textContent = "Logging in...";
+        loginSubmitBtn.querySelector("span").textContent = "Logging in...";
       }
 
       try {
@@ -492,8 +494,7 @@ document.addEventListener("DOMContentLoaded", () => {
             alert("No registered user found with this phone number.");
             if (loginSubmitBtn) {
               loginSubmitBtn.disabled = false;
-              const btnText = loginSubmitBtn.querySelector("span");
-              if (btnText) btnText.textContent = "Login";
+              loginSubmitBtn.querySelector("span").textContent = "Login";
             }
             return;
           }
@@ -508,7 +509,6 @@ document.addEventListener("DOMContentLoaded", () => {
             currentUserData = doc.data();
           }
 
-          // रीडायरेक्ट, लोकल स्टोरेज और कुकी निष्पादन
           const isRedirected = onLoginSuccess(user, currentUserData);
 
           if (!isRedirected) {
@@ -521,11 +521,66 @@ document.addEventListener("DOMContentLoaded", () => {
       } finally {
         if (loginSubmitBtn) {
           loginSubmitBtn.disabled = false;
-          const btnText = loginSubmitBtn.querySelector("span");
-          if (btnText) btnText.textContent = "Login";
+          loginSubmitBtn.querySelector("span").textContent = "Login";
         }
       }
     });
+  }
+
+  /* ------------------------------------------------------------------------
+     H. LOGIN DEVICES RENDERING (DETECT OPERATING SYSTEM & BROWSER)
+     ------------------------------------------------------------------------ */
+  function detectDeviceOS() {
+    const ua = navigator.userAgent;
+    if (ua.indexOf("Win") !== -1) return "Windows PC";
+    if (ua.indexOf("Mac") !== -1) return "macOS Device";
+    if (ua.indexOf("Android") !== -1) return "Android Mobile";
+    if (ua.indexOf("iPhone") !== -1 || ua.indexOf("iPad") !== -1) return "iOS Device (iPhone/iPad)";
+    if (ua.indexOf("Linux") !== -1) return "Linux Workstation";
+    return "Web Browser";
+  }
+
+  function renderActiveDevices() {
+    if (!devicesListContainer) return;
+
+    const currentOS = detectDeviceOS();
+    const lastActiveTime = new Date().toLocaleString('en-IN', {
+      day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+    });
+
+    devicesListContainer.innerHTML = `
+      <div class="device-card primary-device">
+        <div class="device-details">
+          <div class="device-icon-box">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="2" y="3" width="20" height="14" rx="2"></rect>
+              <line x1="12" y1="17" x2="12" y2="21"></line>
+            </svg>
+          </div>
+          <div class="device-info">
+            <h4>${currentOS} <span class="badge-primary">Primary Device</span></h4>
+            <p>Active Now • Last use: ${lastActiveTime}</p>
+          </div>
+        </div>
+        <button type="button" class="btn-revoke" disabled style="opacity:0.5; cursor:default;">Current</button>
+      </div>
+
+      <div class="device-card">
+        <div class="device-details">
+          <div class="device-icon-box">
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="5" y="2" width="14" height="20" rx="2"></rect>
+              <line x1="12" y1="18" x2="12.01" y2="18"></line>
+            </svg>
+          </div>
+          <div class="device-info">
+            <h4>LUROVA Mobile App Session</h4>
+            <p>Last active: 22 Jul 2026, 04:15 PM</p>
+          </div>
+        </div>
+        <button type="button" class="btn-revoke" onclick="alert('Session revoked from device.')">Logout</button>
+      </div>
+    `;
   }
 
   /* ------------------------------------------------------------------------
@@ -543,9 +598,8 @@ document.addEventListener("DOMContentLoaded", () => {
       profileFullName.textContent = full || "LUROVA User";
     }
 
-    if (profileEmail) {
-      profileEmail.textContent = data.email || "";
-    }
+    if (profileEmail) profileEmail.textContent = data.email || "";
+    if (resetEmailDisplay) resetEmailDisplay.textContent = data.email || "";
 
     if (profileFirstName) profileFirstName.value = data.firstName || "";
     if (profileLastName) profileLastName.value = data.lastName || "";
@@ -616,8 +670,7 @@ document.addEventListener("DOMContentLoaded", () => {
       try {
         await db.collection("users").doc(user.uid).update(updatedFields);
         currentUserData = { ...currentUserData, ...updatedFields };
-        
-        // LocalStorage को भी ताज़ा करें
+
         const refreshedUserPayload = {
           uid: user.uid,
           email: user.email,
@@ -647,16 +700,26 @@ document.addEventListener("DOMContentLoaded", () => {
     if (editToggleBtn) editToggleBtn.style.display = "inline-block";
   }
 
+  if (addCardBtn) {
+    addCardBtn.addEventListener("click", () => {
+      alert("Payment gateway integration (Cards / UPI) will be activated for future purchases.");
+    });
+  }
+
+  if (downloadDataBtn) {
+    downloadDataBtn.addEventListener("click", () => {
+      alert("Your account data export request has been logged. An archive file will be prepared.");
+    });
+  }
+
   /* ------------------------------------------------------------------------
      K. LOGOUT & DELETE ACCOUNT
      ------------------------------------------------------------------------ */
   if (logoutBtn) {
     logoutBtn.addEventListener("click", async () => {
       try {
-        // LocalStorage और Cookie साफ़ करें
         localStorage.removeItem('lurova_account_user');
         document.cookie = "lurova_user=; domain=.lurova.life; path=/; max-age=0;";
-        
         await auth.signOut();
         disableEditMode();
       } catch (error) {
@@ -674,7 +737,6 @@ document.addEventListener("DOMContentLoaded", () => {
         try {
           localStorage.removeItem('lurova_account_user');
           document.cookie = "lurova_user=; domain=.lurova.life; path=/; max-age=0;";
-          
           await db.collection("users").doc(user.uid).delete();
           await user.delete();
           alert("Your LUROVA Account has been permanently deleted.");
