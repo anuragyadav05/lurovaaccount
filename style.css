@@ -182,20 +182,22 @@ body.profile-view-active {
 
 .brand-intro p { color: var(--text-muted); font-size: 0.8rem; }
 
-/* SOCIAL BUTTONS */
-.social-login-grid { display: flex; gap: 10px; margin-bottom: 6px; }
+/* ==========================================================================
+   SOCIAL LOGIN BUTTONS (GOOGLE, APPLE, FACEBOOK)
+   ========================================================================== */
+.social-login-grid { display: flex; gap: 8px; margin-bottom: 6px; }
 
 .social-btn {
   flex: 1;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  padding: 9px 12px;
+  gap: 6px;
+  padding: 9px 10px;
   background: #ffffff;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   font-weight: 700;
   color: var(--text-dark);
   cursor: pointer;
@@ -209,7 +211,12 @@ body.profile-view-active {
   box-shadow: 0 4px 12px rgba(0,0,0,0.05);
 }
 
-.social-icon { width: 18px; height: 18px; }
+.social-btn.facebook-btn:hover {
+  border-color: #1877F2;
+  background: #f0f6ff;
+}
+
+.social-icon { width: 18px; height: 18px; flex-shrink: 0; }
 
 .divider-text {
   display: flex;
@@ -232,7 +239,35 @@ body.profile-view-active {
   text-transform: uppercase;
 }
 
-/* SLIDING TRACK & INPUTS */
+/* ==========================================================================
+   PHONE SMS OTP BUTTON STYLING
+   ========================================================================== */
+.btn-phone-otp {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 14px;
+  background: #f1f5f9;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  color: var(--text-dark);
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 4px;
+  transition: all 0.25s ease;
+}
+
+.btn-phone-otp:hover {
+  background: #e2e8f0;
+  border-color: #cbd5e1;
+}
+
+/* ==========================================================================
+   SLIDING TRACK & INPUTS
+   ========================================================================== */
 .form-viewport { overflow: hidden; width: 100%; }
 
 .form-track {
@@ -815,7 +850,7 @@ input:disabled, select:disabled {
 .privacy-card p { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 14px; }
 .privacy-card.danger-zone { border-color: #fecaca; background: #fff5f5; }
 
-/* MODAL */
+/* MODALS */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -934,8 +969,8 @@ input:disabled, select:disabled {
   }
 
   .dashboard-content { padding: 20px 0; }
-  .social-login-grid { flex-direction: row; gap: 8px; margin-bottom: 8px; }
-  .social-btn { min-height: 44px; border-radius: 10px; font-size: 0.85rem; padding: 8px 12px; }
+  .social-login-grid { flex-direction: row; gap: 6px; margin-bottom: 8px; }
+  .social-btn { min-height: 44px; border-radius: 10px; font-size: 0.8rem; padding: 8px 10px; }
 
   input[type="text"], input[type="email"], input[type="tel"], input[type="password"], input[type="date"], select {
     min-height: 44px;
