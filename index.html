@@ -44,6 +44,7 @@
           <div class="form-track" id="formTrack">
 
             <form class="auth-form tight-gap" id="loginForm" novalidate>
+              
               <div class="social-login-grid">
                 <button type="button" class="social-btn google-btn" id="googleLoginBtn">
                   <svg class="social-icon" viewBox="0 0 24 24">
@@ -54,21 +55,29 @@
                   </svg>
                   <span>Google</span>
                 </button>
+
                 <button type="button" class="social-btn apple-btn" id="appleLoginBtn">
                   <svg class="social-icon" viewBox="0 0 24 24" fill="#000000">
                     <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.32c.63-.76 1.05-1.82.93-2.88-.91.04-2.02.61-2.67 1.36-.58.67-.99 1.76-.85 2.8 1.02.08 2.06-.52 2.59-1.28z"/>
                   </svg>
                   <span>Apple</span>
                 </button>
+
+                <button type="button" class="social-btn facebook-btn" id="facebookLoginBtn">
+                  <svg class="social-icon" viewBox="0 0 24 24" fill="#1877F2">
+                    <path d="M24 12.073c0-6.627-4.873-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                  </svg>
+                  <span>Facebook</span>
+                </button>
               </div>
 
               <div class="divider-text">
-                <span>or continue with email</span>
+                <span>or continue with email / phone</span>
               </div>
 
               <div class="input-group">
-                <label for="loginIdentifier">Your Email or Phone</label>
-                <input type="text" id="loginIdentifier" placeholder="hello@lurova.life" required autocomplete="username" />
+                <label for="loginIdentifier">Your Email or Phone Number</label>
+                <input type="text" id="loginIdentifier" placeholder="hello@lurova.life or +91 9876543210" required autocomplete="username" />
               </div>
 
               <div class="input-group">
@@ -85,6 +94,14 @@
                 <a href="#" class="forgot-link" id="forgotPasswordLink">Forgot Password?</a>
               </div>
 
+              <button type="button" class="btn btn-phone-otp" id="loginWithPhoneOtpBtn">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+                  <line x1="12" y1="18" x2="12.01" y2="18"></line>
+                </svg>
+                <span>Login via Phone SMS OTP</span>
+              </button>
+
               <div class="action-buttons-row">
                 <button type="submit" class="btn btn-primary pulse-btn" id="loginSubmitBtn">
                   <span>Login</span>
@@ -95,6 +112,7 @@
             </form>
 
             <form class="auth-form" id="signupForm" novalidate>
+              
               <div class="social-login-grid">
                 <button type="button" class="social-btn google-btn" id="googleSignupBtn">
                   <svg class="social-icon" viewBox="0 0 24 24">
@@ -105,16 +123,24 @@
                   </svg>
                   <span>Google</span>
                 </button>
+
                 <button type="button" class="social-btn apple-btn" id="appleSignupBtn">
                   <svg class="social-icon" viewBox="0 0 24 24" fill="#000000">
                     <path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M15.97 6.32c.63-.76 1.05-1.82.93-2.88-.91.04-2.02.61-2.67 1.36-.58.67-.99 1.76-.85 2.8 1.02.08 2.06-.52 2.59-1.28z"/>
                   </svg>
                   <span>Apple</span>
                 </button>
+
+                <button type="button" class="social-btn facebook-btn" id="facebookSignupBtn">
+                  <svg class="social-icon" viewBox="0 0 24 24" fill="#1877F2">
+                    <path d="M24 12.073c0-6.627-4.873-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                  </svg>
+                  <span>Facebook</span>
+                </button>
               </div>
 
               <div class="divider-text">
-                <span>or register with email</span>
+                <span>or register with email & phone</span>
               </div>
 
               <div class="input-row">
@@ -134,8 +160,8 @@
               </div>
 
               <div class="input-group">
-                <label for="signupPhone">Phone Number</label>
-                <input type="tel" id="signupPhone" placeholder="+1 (555) 000-0000" required autocomplete="tel" />
+                <label for="signupPhone">Phone Number (with country code)</label>
+                <input type="tel" id="signupPhone" placeholder="+91 98765 43210" required autocomplete="tel" />
               </div>
 
               <div class="input-group">
@@ -551,6 +577,42 @@
           <div class="btn-glow"></div>
         </button>
       </form>
+    </div>
+  </div>
+
+  <div class="modal-overlay hidden" id="phoneOtpModal">
+    <div class="modal-card">
+      <button type="button" class="close-modal-btn" id="closePhoneOtpModal">&times;</button>
+      <div class="form-header">
+        <h2 style="font-size: 1.2rem; font-weight: 800; color: var(--text-dark); margin-bottom: 4px;">Phone Verification</h2>
+        <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 14px;">Enter your phone number to receive a 6-digit SMS verification code.</p>
+      </div>
+
+      <div id="phoneInputStep" style="display: flex; flex-direction: column; gap: 12px;">
+        <div class="input-group">
+          <label for="phoneAuthNumber">Phone Number (with Country Code)</label>
+          <input type="tel" id="phoneAuthNumber" placeholder="+91 9876543210" required />
+        </div>
+
+        <div id="recaptcha-container"></div>
+
+        <button type="button" class="btn btn-primary pulse-btn" id="sendOtpBtn">
+          <span>Send SMS OTP</span>
+          <div class="btn-glow"></div>
+        </button>
+      </div>
+
+      <div id="otpInputStep" class="hidden" style="display: flex; flex-direction: column; gap: 12px;">
+        <div class="input-group">
+          <label for="otpCode">6-Digit Verification Code</label>
+          <input type="text" id="otpCode" placeholder="123456" maxlength="6" required />
+        </div>
+
+        <button type="button" class="btn btn-primary pulse-btn" id="verifyOtpBtn">
+          <span>Verify & Sign In</span>
+          <div class="btn-glow"></div>
+        </button>
+      </div>
     </div>
   </div>
 
