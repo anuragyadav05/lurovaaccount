@@ -34,9 +34,9 @@
         <header class="brand-header">
           <img src="https://plain-apac-prod-public.komododecks.com/202607/23/yYdBFLQn5cU9AT4rDJ7v/image.png" alt="LUROVA Logo" class="brand-logo" />
           <div class="brand-intro">
-            <span>Welcome to</span>
-            <h1 class="color-change-text">Lurova</h1>
-            <p>Please login or register to your account.</p>
+            <span>We are</span>
+            <h1 class="color-change-text">Abstract World</h1>
+            <p>Welcome back, Please login or register to your account.</p>
           </div>
         </header>
 
@@ -322,7 +322,7 @@
           <div class="panel-header">
             <div>
               <h2>Active Login Devices</h2>
-              <p>Manage sessions and logged-in devices associated with your LUROVA ID.</p>
+              <p>Real-time active sessions and logged-in devices associated with your LUROVA Account.</p>
             </div>
           </div>
 
@@ -381,7 +381,7 @@
           <div class="panel-header">
             <div>
               <h2>Payments & Saved Methods</h2>
-              <p>Manage payment methods, subscriptions, and wallet status.</p>
+              <p>Manage cards, UPI IDs, subscriptions, and wallet status.</p>
             </div>
           </div>
 
@@ -399,47 +399,22 @@
           </div>
 
           <div class="payment-section">
-            <h3>Saved Payment Methods</h3>
-            <div class="payment-methods-grid">
-              <div class="payment-card add-card-btn" id="addCardBtn">
-                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
-                  <circle cx="12" cy="12" r="10"></circle>
-                  <line x1="12" y1="8" x2="12" y2="16"></line>
-                  <line x1="8" y1="12" x2="16" y2="12"></line>
-                </svg>
-                <span>Add Card or UPI ID</span>
+            <div class="section-title-row">
+              <h3>Saved Payment Methods</h3>
+              <div class="add-payment-actions">
+                <button type="button" class="btn btn-outline btn-sm" id="openCardModalBtn">+ Add Card</button>
+                <button type="button" class="btn btn-outline btn-sm" id="openUpiModalBtn">+ Add UPI ID</button>
               </div>
             </div>
+
+            <div class="payment-methods-grid" id="savedPaymentMethodsGrid">
+              </div>
           </div>
 
           <div class="payment-section">
             <h3>Recent Transaction History</h3>
-            <div class="history-table-wrapper">
-              <table class="history-table">
-                <thead>
-                  <tr>
-                    <th>Service</th>
-                    <th>Date</th>
-                    <th>Amount</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td>LUROVA OTT Premium Pass</td>
-                    <td>24 Jul 2026</td>
-                    <td>₹499</td>
-                    <td><span class="badge-success">Successful</span></td>
-                  </tr>
-                  <tr>
-                    <td>LUROVA Ads Campaign Credit</td>
-                    <td>10 Jun 2026</td>
-                    <td>₹1,200</td>
-                    <td><span class="badge-success">Successful</span></td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
+            <div class="history-table-wrapper" id="transactionHistoryContainer">
+              </div>
           </div>
         </div>
 
@@ -470,7 +445,7 @@
           <div class="desktop-privacy-container">
             <div class="privacy-card">
               <h4>Download Account Data Archive</h4>
-              <p>Request a complete export copy of all your profile information, subscription history, and activity logs across LUROVA websites.</p>
+              <p>Request a complete export copy of all your profile information, saved credentials, and activity logs across LUROVA websites.</p>
               <button type="button" class="btn btn-outline" id="downloadDataBtn">Request Data Export</button>
             </div>
 
@@ -505,6 +480,74 @@
 
         <button type="submit" class="btn btn-primary pulse-btn" id="resetSubmitBtn">
           <span>Send Reset Link</span>
+          <div class="btn-glow"></div>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal-overlay hidden" id="cardModal">
+    <div class="modal-card">
+      <button type="button" class="close-modal-btn" id="closeCardModal">&times;</button>
+      <div class="form-header">
+        <h2 style="font-size: 1.2rem; font-weight: 800; color: var(--text-dark); margin-bottom: 4px;">Save Card Details</h2>
+        <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 14px;">Cards are saved securely for quick checkout across LUROVA apps.</p>
+      </div>
+
+      <form id="addCardForm" novalidate style="display: flex; flex-direction: column; gap: 12px;">
+        <div class="input-group">
+          <label for="cardHolderName">Card Holder Name</label>
+          <input type="text" id="cardHolderName" placeholder="John Doe" required />
+        </div>
+
+        <div class="input-group">
+          <div class="card-label-row">
+            <label for="cardNumber">Card Number</label>
+            <span class="card-brand-badge" id="cardBrandBadge">Card</span>
+          </div>
+          <input type="text" id="cardNumber" placeholder="4000 1234 5678 9010" maxlength="19" required />
+        </div>
+
+        <div class="input-row">
+          <div class="input-group">
+            <label for="cardExpiry">Expiry (MM/YY)</label>
+            <input type="text" id="cardExpiry" placeholder="12/28" maxlength="5" required />
+          </div>
+          <div class="input-group">
+            <label for="cardCvv">CVV</label>
+            <input type="password" id="cardCvv" placeholder="•••" maxlength="4" required />
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary pulse-btn" style="margin-top: 6px;">
+          <span>Save Card</span>
+          <div class="btn-glow"></div>
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <div class="modal-overlay hidden" id="upiModal">
+    <div class="modal-card">
+      <button type="button" class="close-modal-btn" id="closeUpiModal">&times;</button>
+      <div class="form-header">
+        <h2 style="font-size: 1.2rem; font-weight: 800; color: var(--text-dark); margin-bottom: 4px;">Save UPI ID</h2>
+        <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 14px;">Save your UPI VPA for seamless 1-click payment verification.</p>
+      </div>
+
+      <form id="addUpiForm" novalidate style="display: flex; flex-direction: column; gap: 12px;">
+        <div class="input-group">
+          <label for="upiAccountName">Account / Display Name</label>
+          <input type="text" id="upiAccountName" placeholder="My GPay / PhonePe" required />
+        </div>
+
+        <div class="input-group">
+          <label for="upiId">UPI ID (VPA)</label>
+          <input type="text" id="upiId" placeholder="username@upi / username@okaxis" required />
+        </div>
+
+        <button type="submit" class="btn btn-primary pulse-btn" style="margin-top: 6px;">
+          <span>Save UPI ID</span>
           <div class="btn-glow"></div>
         </button>
       </form>
