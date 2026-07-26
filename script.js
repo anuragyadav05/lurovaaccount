@@ -15,10 +15,10 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-// Set Auth Persistence to LOCAL
+// Set Auth Persistence to LOCAL (Session stays across browser restarts)
 auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
 
-// Initialize EmailJS (Optional)
+// Initialize EmailJS Browser SDK (Optional)
 (function() {
     if (window.emailjs) {
         emailjs.init("YOUR_EMAILJS_PUBLIC_KEY");
@@ -26,9 +26,10 @@ auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
 })();
 
 // ==========================================================================
-// 2. CROSS-SUBDOMAIN POSTMESSAGE LISTENER
+// 2. CROSS-SUBDOMAIN POSTMESSAGE LISTENER (ads.lurova.life Auto-Login)
 // ==========================================================================
 window.addEventListener('message', (event) => {
+  // Verify request origin comes from a lurova.life subdomain or localhost
   if (event.origin.includes('lurova.life') || event.origin.includes('localhost')) {
     if (event.data === 'CHECK_LUROVA_SESSION') {
       const savedUser = localStorage.getItem('lurova_account_user');
@@ -53,6 +54,7 @@ window.addEventListener('message', (event) => {
 function onLoginSuccess(user, userData) {
   const email = user.email || '';
   
+  // Determine full user display name
   let name = "";
   if (userData && userData.firstName) {
     name = `${userData.firstName} ${userData.lastName || ''}`.trim();
@@ -65,11 +67,14 @@ function onLoginSuccess(user, userData) {
 
   const userPayload = { uid, email, displayName: name, phone };
 
+  // Store in LocalStorage for cross-tab availability & postMessage checks
   localStorage.setItem('lurova_account_user', JSON.stringify(userPayload));
 
+  // Set Root Domain Cookie (.lurova.life) for all sub-domains
   const cookiePayload = JSON.stringify({ email, name, uid, phone });
   document.cookie = `lurova_user=${encodeURIComponent(cookiePayload)}; domain=.lurova.life; path=/; max-age=2592000; SameSite=Lax; Secure`;
 
+  // Check for Redirect Parameters (redirect_to, redirect_url, or redirect)
   const urlParams = new URLSearchParams(window.location.search);
   const redirectToParam = urlParams.get('redirect_to');
   const redirectUrl = urlParams.get('redirect_url') || urlParams.get('redirect') || redirectToParam;
@@ -84,6 +89,7 @@ function onLoginSuccess(user, userData) {
       finalUrl.searchParams.set('uid', uid);
       finalUrl.searchParams.set('safari_auth', 'true');
       
+      // Clean redirect without back-cache in mobile/Safari browsers
       window.location.replace(finalUrl.toString());
       return true;
     } catch (e) {
@@ -94,7 +100,7 @@ function onLoginSuccess(user, userData) {
     }
   }
 
-  return false;
+  return false; // Returns false if no redirect parameter was provided
 }
 
 // ==========================================================================
@@ -114,7 +120,7 @@ function detectCardBrand(number) {
 // 5. MAIN APPLICATION LOGIC
 // ==========================================================================
 document.addEventListener("DOMContentLoaded", () => {
-  // UI Containers
+  // UI Canvas Containers
   const bgArt = document.getElementById("bgArt");
   const authCard = document.getElementById("authCard");
   const profileCard = document.getElementById("profileCard");
@@ -159,7 +165,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const signupForm = document.getElementById("signupForm");
   const profileDetailsForm = document.getElementById("profileDetailsForm");
 
-  // Password Inputs
+  // Password Validation Inputs
   const signupPassword = document.getElementById("signupPassword");
   const confirmPassword = document.getElementById("confirmPassword");
   const passwordMatchError = document.getElementById("passwordMatchError");
@@ -324,10 +330,10 @@ document.addEventListener("DOMContentLoaded", () => {
   if (closeCardModal) closeCardModal.addEventListener("click", () => cardModal.classList.add("hidden"));
   if (closeUpiModal) closeUpiModal.addEventListener("click", () => upiModal.classList.add("hidden"));
 
+  // Auto detect card brand on typing card number
   if (cardNumberInput && cardBrandBadge) {
     cardNumberInput.addEventListener("input", (e) => {
       let val = e.target.value.replace(/\D/g, '');
-      // Format 16 digits into groups of 4
       val = val.match(/.{1,4}/g)?.join(' ') || val;
       e.target.value = val.substring(0, 19);
 
@@ -336,7 +342,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Save Card
+  // Save Debit/Credit Card
   if (addCardForm) {
     addCardForm.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -384,7 +390,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Save UPI
+  // Save UPI ID
   if (addUpiForm) {
     addUpiForm.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -426,7 +432,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Render Payment Methods & Delete Handler
+  // Render Saved Payment Methods
   function renderPaymentMethods(methods) {
     if (!savedPaymentMethodsGrid) return;
 
@@ -466,7 +472,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }).join('');
   }
 
-  // Delete Payment Method
+  // Global Delete Saved Payment Method Handler
   window.deletePaymentMethod = async function(id) {
     const user = auth.currentUser;
     if (!user || !confirm("Are you sure you want to remove this saved payment method?")) return;
@@ -485,7 +491,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
-  // Render Real Transactions or Empty State
+  // Render Transaction History or Clean Empty Message
   function renderTransactionHistory(transactions) {
     if (!transactionHistoryContainer) return;
 
@@ -968,128 +974,6 @@ document.addEventListener("DOMContentLoaded", () => {
           alert("Your LUROVA Account has been permanently deleted.");
         } catch (error) {
           alert("Delete Error: " + error.message);
-
-          import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
-import { 
-  getAuth, 
-  signInWithPopup, 
-  FacebookAuthProvider, 
-  RecaptchaVerifier, 
-  signInWithPhoneNumber,
-  onAuthStateChanged 
-} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
-
-// Your web app's Firebase configuration
-const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_AUTH_DOMAIN",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_STORAGE_BUCKET",
-  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
-  appId: "YOUR_APP_ID"
-};
-
-// Initialize Firebase & Auth
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-
-// Keep track of the phone verification result
-let confirmationResult = null;
-
-// ==========================================
-// 1. FACEBOOK AUTHENTICATION
-// ==========================================
-const facebookProvider = new FacebookAuthProvider();
-const facebookBtn = document.getElementById("btn-facebook-login");
-
-facebookBtn.addEventListener("click", async () => {
-  try {
-    const result = await signInWithPopup(auth, facebookProvider);
-    const user = result.user;
-    console.log("Facebook Sign-In successful:", user);
-  } catch (error) {
-    console.error("Facebook Sign-In Error:", error.message);
-    alert(`Facebook Auth Failed: ${error.message}`);
-  }
-});
-
-// ==========================================
-// 2. PHONE NUMBER AUTHENTICATION
-// ==========================================
-
-// Initialize reCAPTCHA Verifier
-window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
-  'size': 'invisible',
-  'callback': (response) => {
-    // reCAPTCHA solved - allow signInWithPhoneNumber
-  }
-});
-
-const sendCodeBtn = document.getElementById("btn-send-code");
-const verifyCodeBtn = document.getElementById("btn-verify-code");
-const phoneInputGroup = document.getElementById("phone-input-group");
-const otpGroup = document.getElementById("otp-group");
-
-// Step A: Send SMS Verification Code
-sendCodeBtn.addEventListener("click", async () => {
-  const phoneNumber = document.getElementById("phone-number").value.trim();
-
-  if (!phoneNumber) {
-    alert("Please enter a valid phone number including the country code (e.g., +11234567890).");
-    return;
-  }
-
-  const appVerifier = window.recaptchaVerifier;
-
-  try {
-    confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, appVerifier);
-    console.log("SMS sent successfully.");
-    
-    // UI Updates
-    phoneInputGroup.classList.add("hidden");
-    sendCodeBtn.classList.add("hidden");
-    otpGroup.classList.remove("hidden");
-    alert("Verification code sent to your phone.");
-  } catch (error) {
-    console.error("Error sending SMS:", error.message);
-    alert(`Failed to send SMS: ${error.message}`);
-    // Reset reCAPTCHA on failure so user can try again
-    window.recaptchaVerifier.render().then((widgetId) => {
-      grecaptcha.reset(widgetId);
-    });
-  }
-});
-
-// Step B: Verify the SMS Code
-verifyCodeBtn.addEventListener("click", async () => {
-  const code = document.getElementById("verification-code").value.trim();
-
-  if (!code || !confirmationResult) {
-    alert("Please enter the verification code received via SMS.");
-    return;
-  }
-
-  try {
-    const result = await confirmationResult.confirm(code);
-    const user = result.user;
-    console.log("Phone Auth successful:", user);
-  } catch (error) {
-    console.error("Code Verification Error:", error.message);
-    alert("Invalid verification code. Please try again.");
-  }
-});
-
-// ==========================================
-// 3. AUTH STATE OBSERVER
-// ==========================================
-onAuthStateChanged(auth, (user) => {
-  const statusDiv = document.getElementById("user-status");
-  if (user) {
-    statusDiv.textContent = `Signed in as: ${user.displayName || user.phoneNumber || user.email}`;
-  } else {
-    statusDiv.textContent = "Not signed in.";
-  }
-});
         }
       }
     });
