@@ -463,7 +463,7 @@ input:disabled, select:disabled {
   box-shadow: 0 20px 40px rgba(15, 23, 42, 0.08);
   border: 1px solid var(--border-color);
   display: flex;
-  min-height: 600px;
+  min-height: 620px;
   width: 100%;
   overflow: hidden;
 }
@@ -476,7 +476,7 @@ input:disabled, select:disabled {
   padding: 28px 20px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 18px;
   flex-shrink: 0;
 }
 
@@ -754,33 +754,56 @@ input:disabled, select:disabled {
 .wallet-banner p { font-size: 0.8rem; margin-top: 2px; }
 
 .payment-section { margin-bottom: 24px; }
-.payment-section h3 { font-size: 0.95rem; font-weight: 800; color: var(--text-dark); margin-bottom: 12px; }
+.section-title-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
+.section-title-row h3 { font-size: 0.95rem; font-weight: 800; color: var(--text-dark); }
+.add-payment-actions { display: flex; gap: 8px; }
 
 .payment-methods-grid { display: flex; gap: 12px; flex-wrap: wrap; }
 
-.payment-card {
+.saved-payment-card {
+  flex: 1 1 calc(50% - 6px);
+  min-width: 240px;
   padding: 16px;
-  border: 1px dashed var(--border-color);
+  border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
+  background: #f8fafc;
   display: flex;
   align-items: center;
-  gap: 10px;
-  cursor: pointer;
-  color: var(--text-muted);
-  font-size: 0.85rem;
-  font-weight: 700;
-  transition: all 0.2s ease;
+  justify-content: space-between;
 }
 
-.payment-card:hover { border-color: var(--primary-purple); color: var(--primary-purple); background: #f0f3ff; }
+.payment-card-left { display: flex; align-items: center; gap: 12px; }
 
-/* HISTORY TABLE */
-.history-table-wrapper { overflow-x: auto; }
+.payment-type-badge {
+  padding: 4px 8px;
+  background: #ffffff;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--primary-purple);
+  text-transform: uppercase;
+}
 
-.history-table { width: 100%; border-collapse: collapse; text-align: left; }
-.history-table th { padding: 10px 12px; font-size: 0.72rem; font-weight: 800; color: var(--text-muted); text-transform: uppercase; border-bottom: 1px solid var(--border-color); }
-.history-table td { padding: 12px; font-size: 0.82rem; color: var(--text-dark); border-bottom: 1px solid #f1f5f9; }
-.badge-success { background: #dcfce7; color: #15803d; font-size: 0.7rem; padding: 3px 8px; border-radius: 10px; font-weight: 700; }
+.payment-card-info h5 { font-size: 0.88rem; font-weight: 800; color: var(--text-dark); }
+.payment-card-info p { font-size: 0.75rem; color: var(--text-muted); }
+
+.card-label-row { display: flex; justify-content: space-between; align-items: center; }
+.card-brand-badge { font-size: 0.7rem; font-weight: 800; padding: 2px 8px; background: #e0e7ff; color: #4338ca; border-radius: 6px; text-transform: uppercase; }
+
+/* TRANSACTION HISTORY */
+.history-table-wrapper { overflow-x: auto; width: 100%; }
+
+.empty-history-box {
+  padding: 32px 20px;
+  text-align: center;
+  background: #f8fafc;
+  border: 1px dashed var(--border-color);
+  border-radius: var(--radius-lg);
+  color: var(--text-muted);
+  font-size: 0.88rem;
+  font-weight: 600;
+}
 
 /* PASSWORD & PRIVACY */
 .password-reset-box { padding: 20px; background: #f8fafc; border-radius: var(--radius-lg); border: 1px solid var(--border-color); }
@@ -895,7 +918,6 @@ input:disabled, select:disabled {
     background: #ffffff;
   }
 
-  /* Horizontal scroll for sidebar menu on mobile */
   .sidebar-menu {
     flex-direction: row;
     overflow-x: auto;
@@ -911,10 +933,7 @@ input:disabled, select:disabled {
     border: 1px solid var(--border-color);
   }
 
-  .dashboard-content {
-    padding: 20px 0;
-  }
-
+  .dashboard-content { padding: 20px 0; }
   .social-login-grid { flex-direction: row; gap: 8px; margin-bottom: 8px; }
   .social-btn { min-height: 44px; border-radius: 10px; font-size: 0.85rem; padding: 8px 12px; }
 
@@ -930,5 +949,5 @@ input:disabled, select:disabled {
   .action-buttons-row .btn { width: 100%; }
   .auth-form { padding-right: 0; }
   .input-row, .profile-details-grid { flex-direction: column; gap: 10px; }
-  .detail-item { flex: 1 1 100%; }
+  .detail-item, .saved-payment-card { flex: 1 1 100%; }
 }
