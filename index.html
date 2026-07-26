@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>LUROVA Account | Single Sign-On</title>
+  <title>LUROVA Account | Single Sign-On Dashboard</title>
   <link rel="stylesheet" href="style.css" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -27,10 +27,9 @@
     <div class="sphere sphere-3"></div>
   </div>
 
-  <main class="app-canvas">
+  <main class="app-canvas" id="appCanvas">
 
     <div class="auth-card" id="authCard">
-      
       <div class="form-container">
         <header class="brand-header">
           <img src="https://plain-apac-prod-public.komododecks.com/202607/23/yYdBFLQn5cU9AT4rDJ7v/image.png" alt="LUROVA Logo" class="brand-logo" />
@@ -45,7 +44,6 @@
           <div class="form-track" id="formTrack">
 
             <form class="auth-form tight-gap" id="loginForm" novalidate>
-              
               <div class="social-login-grid">
                 <button type="button" class="social-btn google-btn" id="googleLoginBtn">
                   <svg class="social-icon" viewBox="0 0 24 24">
@@ -97,7 +95,6 @@
             </form>
 
             <form class="auth-form" id="signupForm" novalidate>
-              
               <div class="social-login-grid">
                 <button type="button" class="social-btn google-btn" id="googleSignupBtn">
                   <svg class="social-icon" viewBox="0 0 24 24">
@@ -182,95 +179,310 @@
           </div>
         </div>
       </div>
-
     </div>
 
-    <div class="profile-card hidden" id="profileCard">
+    <div class="dashboard-container hidden" id="profileCard">
       
-      <div class="profile-nav-row">
+      <aside class="dashboard-sidebar">
+        <div class="sidebar-brand">
+          <img src="https://plain-apac-prod-public.komododecks.com/202607/23/yYdBFLQn5cU9AT4rDJ7v/image.png" alt="LUROVA Logo" class="sidebar-logo" />
+          <span class="account-tag">Central ID</span>
+        </div>
+
         <button type="button" class="btn-back" id="profileBackBtn" aria-label="Go Back">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
             <line x1="19" y1="12" x2="5" y2="12"></line>
             <polyline points="12 19 5 12 12 5"></polyline>
           </svg>
           <span>Back</span>
         </button>
-      </div>
 
-      <div class="profile-header">
-        <div class="avatar-container">
+        <div class="sidebar-user">
           <div class="avatar-circle" id="userAvatar">L</div>
-          <span class="status-badge"></span>
-        </div>
-        <h2 id="profileFullName">User Name</h2>
-        <p class="profile-email" id="profileEmail">user@lurova.life</p>
-        <span class="account-tag">LUROVA Central Identity</span>
-      </div>
-
-      <div class="profile-content">
-        <div class="profile-section-title">
-          <h3>Personal Details</h3>
-          <button type="button" class="btn-text" id="editToggleBtn">Edit Details</button>
-        </div>
-
-        <form id="profileDetailsForm" class="profile-details-grid">
-          <div class="detail-item">
-            <span class="detail-label">First Name</span>
-            <input type="text" id="profileFirstName" disabled required />
-          </div>
-          
-          <div class="detail-item">
-            <span class="detail-label">Last Name</span>
-            <input type="text" id="profileLastName" disabled required />
-          </div>
-
-          <div class="detail-item full-width">
-            <span class="detail-label">Phone Number</span>
-            <input type="tel" id="profilePhone" disabled required />
-          </div>
-
-          <div class="detail-item full-width">
-            <span class="detail-label">Address <small class="optional-tag">(Optional)</small></span>
-            <input type="text" id="profileAddress" placeholder="Enter your full address" disabled />
-          </div>
-
-          <div class="detail-item">
-            <span class="detail-label">Date of Birth <small class="optional-tag">(Optional)</small></span>
-            <input type="date" id="profileDob" disabled />
-          </div>
-
-          <div class="detail-item">
-            <span class="detail-label">Gender <small class="optional-tag">(Optional)</small></span>
-            <select id="profileGender" disabled>
-              <option value="">Select Gender</option>
-              <option value="Male">Male</option>
-              <option value="Female">Female</option>
-              <option value="Other">Other</option>
-              <option value="Prefer not to say">Prefer not to say</option>
-            </select>
-          </div>
-
-          <div class="action-buttons-group hidden" id="editActions">
-            <button type="button" class="btn btn-outline" id="cancelEditBtn">Cancel</button>
-            <button type="submit" class="btn btn-primary" id="saveProfileBtn">Save Changes</button>
-          </div>
-        </form>
-
-        <hr class="divider" />
-
-        <div class="connected-apps">
-          <span class="detail-label">Active Sub-Domains</span>
-          <div class="apps-badges">
-            <span class="app-badge">ads.lurova.life</span>
-            <span class="app-badge">ott.lurova.life</span>
+          <div class="sidebar-user-info">
+            <h3 id="profileFullName">User Name</h3>
+            <p id="profileEmail">user@lurova.life</p>
           </div>
         </div>
 
-        <div class="profile-footer">
+        <nav class="sidebar-menu">
+          <button type="button" class="menu-item active" data-tab="tab-profile">
+            <svg class="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path>
+              <circle cx="12" cy="7" r="4"></circle>
+            </svg>
+            <span>Profile</span>
+          </button>
+
+          <button type="button" class="menu-item" data-tab="tab-devices">
+            <svg class="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+              <line x1="8" y1="21" x2="16" y2="21"></line>
+              <line x1="12" y1="17" x2="12" y2="21"></line>
+            </svg>
+            <span>Login Devices</span>
+          </button>
+
+          <button type="button" class="menu-item" data-tab="tab-apps">
+            <svg class="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="3" width="7" height="7"></rect>
+              <rect x="14" y="3" width="7" height="7"></rect>
+              <rect x="14" y="14" width="7" height="7"></rect>
+              <rect x="3" y="14" width="7" height="7"></rect>
+            </svg>
+            <span>Linked Apps</span>
+          </button>
+
+          <button type="button" class="menu-item" data-tab="tab-payment">
+            <svg class="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+              <line x1="1" y1="10" x2="23" y2="10"></line>
+            </svg>
+            <span>Payment & Subscriptions</span>
+          </button>
+
+          <button type="button" class="menu-item" data-tab="tab-password">
+            <svg class="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+            </svg>
+            <span>Reset Password</span>
+          </button>
+
+          <button type="button" class="menu-item desktop-only-item" data-tab="tab-privacy">
+            <svg class="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+            </svg>
+            <span>Data & Privacy</span>
+            <span class="badge-desktop">Desktop</span>
+          </button>
+        </nav>
+
+        <div class="sidebar-footer">
           <button type="button" class="btn btn-outline btn-logout" id="logoutBtn">Log Out</button>
-          <button type="button" class="btn-danger-text" id="deleteAccountBtn">Delete Account</button>
         </div>
-      </div>
+      </aside>
+
+      <section class="dashboard-content">
+
+        <div class="tab-panel active" id="tab-profile">
+          <div class="panel-header">
+            <div>
+              <h2>Personal Information</h2>
+              <p>Manage your account personal details and preferences.</p>
+            </div>
+            <button type="button" class="btn-text" id="editToggleBtn">Edit Details</button>
+          </div>
+
+          <form id="profileDetailsForm" class="profile-details-grid">
+            <div class="detail-item">
+              <span class="detail-label">First Name</span>
+              <input type="text" id="profileFirstName" disabled required />
+            </div>
+            
+            <div class="detail-item">
+              <span class="detail-label">Last Name</span>
+              <input type="text" id="profileLastName" disabled required />
+            </div>
+
+            <div class="detail-item full-width">
+              <span class="detail-label">Phone Number</span>
+              <input type="tel" id="profilePhone" disabled required />
+            </div>
+
+            <div class="detail-item full-width">
+              <span class="detail-label">Address <small class="optional-tag">(Optional)</small></span>
+              <input type="text" id="profileAddress" placeholder="Enter your full address" disabled />
+            </div>
+
+            <div class="detail-item">
+              <span class="detail-label">Date of Birth <small class="optional-tag">(Optional)</small></span>
+              <input type="date" id="profileDob" disabled />
+            </div>
+
+            <div class="detail-item">
+              <span class="detail-label">Gender <small class="optional-tag">(Optional)</small></span>
+              <select id="profileGender" disabled>
+                <option value="">Select Gender</option>
+                <option value="Male">Male</option>
+                <option value="Female">Female</option>
+                <option value="Other">Other</option>
+                <option value="Prefer not to say">Prefer not to say</option>
+              </select>
+            </div>
+
+            <div class="action-buttons-group hidden" id="editActions">
+              <button type="button" class="btn btn-outline" id="cancelEditBtn">Cancel</button>
+              <button type="submit" class="btn btn-primary" id="saveProfileBtn">Save Changes</button>
+            </div>
+          </form>
+        </div>
+
+        <div class="tab-panel" id="tab-devices">
+          <div class="panel-header">
+            <div>
+              <h2>Active Login Devices</h2>
+              <p>Manage sessions and logged-in devices associated with your LUROVA ID.</p>
+            </div>
+          </div>
+
+          <div class="devices-list" id="devicesListContainer">
+            </div>
+        </div>
+
+        <div class="tab-panel" id="tab-apps">
+          <div class="panel-header">
+            <div>
+              <h2>Linked LUROVA Websites & Apps</h2>
+              <p>Sub-domains connected and accessible using your single LUROVA Account.</p>
+            </div>
+          </div>
+
+          <div class="linked-apps-grid">
+            <div class="app-card">
+              <div class="app-info">
+                <div class="app-icon-badge">OTT</div>
+                <div>
+                  <h4>LUROVA OTT Stream</h4>
+                  <p>ott.lurova.life</p>
+                </div>
+              </div>
+              <span class="status-connected">Active</span>
+              <a href="https://ott.lurova.life/" target="_blank" class="btn btn-outline btn-sm">Launch App</a>
+            </div>
+
+            <div class="app-card">
+              <div class="app-info">
+                <div class="app-icon-badge ads">ADS</div>
+                <div>
+                  <h4>LUROVA Ads Platform</h4>
+                  <p>ads.lurova.life</p>
+                </div>
+              </div>
+              <span class="status-connected">Active</span>
+              <a href="https://ads.lurova.life/" target="_blank" class="btn btn-outline btn-sm">Launch App</a>
+            </div>
+
+            <div class="app-card">
+              <div class="app-info">
+                <div class="app-icon-badge games">GAME</div>
+                <div>
+                  <h4>LUROVA Gaming Hub</h4>
+                  <p>games.lurova.life</p>
+                </div>
+              </div>
+              <span class="status-connected">Active</span>
+              <a href="https://games.lurova.life/" target="_blank" class="btn btn-outline btn-sm">Launch App</a>
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-panel" id="tab-payment">
+          <div class="panel-header">
+            <div>
+              <h2>Payments & Saved Methods</h2>
+              <p>Manage payment methods, subscriptions, and wallet status.</p>
+            </div>
+          </div>
+
+          <div class="wallet-banner">
+            <div class="wallet-icon">
+              <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="2" y="4" width="20" height="16" rx="2"></rect>
+                <path d="M16 12h.01"></path>
+              </svg>
+            </div>
+            <div>
+              <h4>LUROVA Wallet</h4>
+              <p>Currently not working in India <strong>(Active Soon)</strong>. Stay tuned for instant cashback rewards!</p>
+            </div>
+          </div>
+
+          <div class="payment-section">
+            <h3>Saved Payment Methods</h3>
+            <div class="payment-methods-grid">
+              <div class="payment-card add-card-btn" id="addCardBtn">
+                <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="8" x2="12" y2="16"></line>
+                  <line x1="8" y1="12" x2="16" y2="12"></line>
+                </svg>
+                <span>Add Card or UPI ID</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="payment-section">
+            <h3>Recent Transaction History</h3>
+            <div class="history-table-wrapper">
+              <table class="history-table">
+                <thead>
+                  <tr>
+                    <th>Service</th>
+                    <th>Date</th>
+                    <th>Amount</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>LUROVA OTT Premium Pass</td>
+                    <td>24 Jul 2026</td>
+                    <td>₹499</td>
+                    <td><span class="badge-success">Successful</span></td>
+                  </tr>
+                  <tr>
+                    <td>LUROVA Ads Campaign Credit</td>
+                    <td>10 Jun 2026</td>
+                    <td>₹1,200</td>
+                    <td><span class="badge-success">Successful</span></td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-panel" id="tab-password">
+          <div class="panel-header">
+            <div>
+              <h2>Security & Password</h2>
+              <p>Update your password or dispatch a security reset link to your email.</p>
+            </div>
+          </div>
+
+          <div class="password-reset-box">
+            <p>Click below to receive a secure password reset link at your registered email address (<strong id="resetEmailDisplay">user@lurova.life</strong>).</p>
+            <button type="button" class="btn btn-primary" id="directResetEmailBtn">
+              <span>Send Password Reset Email</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="tab-panel" id="tab-privacy">
+          <div class="panel-header">
+            <div>
+              <h2>Data & Privacy Controls</h2>
+              <p>Manage your account data rights and privacy settings.</p>
+            </div>
+          </div>
+
+          <div class="desktop-privacy-container">
+            <div class="privacy-card">
+              <h4>Download Account Data Archive</h4>
+              <p>Request a complete export copy of all your profile information, subscription history, and activity logs across LUROVA websites.</p>
+              <button type="button" class="btn btn-outline" id="downloadDataBtn">Request Data Export</button>
+            </div>
+
+            <div class="privacy-card danger-zone">
+              <h4>Danger Zone</h4>
+              <p>Permanently delete your central LUROVA ID, revoking active credentials across all linked sub-domains.</p>
+              <button type="button" class="btn-danger-text" id="deleteAccountBtn">Delete LUROVA Account</button>
+            </div>
+          </div>
+        </div>
+
+      </section>
     </div>
 
   </main>
