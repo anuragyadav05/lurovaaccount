@@ -968,6 +968,128 @@ document.addEventListener("DOMContentLoaded", () => {
           alert("Your LUROVA Account has been permanently deleted.");
         } catch (error) {
           alert("Delete Error: " + error.message);
+
+          import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+import { 
+  getAuth, 
+  signInWithPopup, 
+  FacebookAuthProvider, 
+  RecaptchaVerifier, 
+  signInWithPhoneNumber,
+  onAuthStateChanged 
+} from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+
+// Your web app's Firebase configuration
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_AUTH_DOMAIN",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_STORAGE_BUCKET",
+  messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+  appId: "YOUR_APP_ID"
+};
+
+// Initialize Firebase & Auth
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+
+// Keep track of the phone verification result
+let confirmationResult = null;
+
+// ==========================================
+// 1. FACEBOOK AUTHENTICATION
+// ==========================================
+const facebookProvider = new FacebookAuthProvider();
+const facebookBtn = document.getElementById("btn-facebook-login");
+
+facebookBtn.addEventListener("click", async () => {
+  try {
+    const result = await signInWithPopup(auth, facebookProvider);
+    const user = result.user;
+    console.log("Facebook Sign-In successful:", user);
+  } catch (error) {
+    console.error("Facebook Sign-In Error:", error.message);
+    alert(`Facebook Auth Failed: ${error.message}`);
+  }
+});
+
+// ==========================================
+// 2. PHONE NUMBER AUTHENTICATION
+// ==========================================
+
+// Initialize reCAPTCHA Verifier
+window.recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+  'size': 'invisible',
+  'callback': (response) => {
+    // reCAPTCHA solved - allow signInWithPhoneNumber
+  }
+});
+
+const sendCodeBtn = document.getElementById("btn-send-code");
+const verifyCodeBtn = document.getElementById("btn-verify-code");
+const phoneInputGroup = document.getElementById("phone-input-group");
+const otpGroup = document.getElementById("otp-group");
+
+// Step A: Send SMS Verification Code
+sendCodeBtn.addEventListener("click", async () => {
+  const phoneNumber = document.getElementById("phone-number").value.trim();
+
+  if (!phoneNumber) {
+    alert("Please enter a valid phone number including the country code (e.g., +11234567890).");
+    return;
+  }
+
+  const appVerifier = window.recaptchaVerifier;
+
+  try {
+    confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, appVerifier);
+    console.log("SMS sent successfully.");
+    
+    // UI Updates
+    phoneInputGroup.classList.add("hidden");
+    sendCodeBtn.classList.add("hidden");
+    otpGroup.classList.remove("hidden");
+    alert("Verification code sent to your phone.");
+  } catch (error) {
+    console.error("Error sending SMS:", error.message);
+    alert(`Failed to send SMS: ${error.message}`);
+    // Reset reCAPTCHA on failure so user can try again
+    window.recaptchaVerifier.render().then((widgetId) => {
+      grecaptcha.reset(widgetId);
+    });
+  }
+});
+
+// Step B: Verify the SMS Code
+verifyCodeBtn.addEventListener("click", async () => {
+  const code = document.getElementById("verification-code").value.trim();
+
+  if (!code || !confirmationResult) {
+    alert("Please enter the verification code received via SMS.");
+    return;
+  }
+
+  try {
+    const result = await confirmationResult.confirm(code);
+    const user = result.user;
+    console.log("Phone Auth successful:", user);
+  } catch (error) {
+    console.error("Code Verification Error:", error.message);
+    alert("Invalid verification code. Please try again.");
+  }
+});
+
+// ==========================================
+// 3. AUTH STATE OBSERVER
+// ==========================================
+onAuthStateChanged(auth, (user) => {
+  const statusDiv = document.getElementById("user-status");
+  if (user) {
+    statusDiv.textContent = `Signed in as: ${user.displayName || user.phoneNumber || user.email}`;
+  } else {
+    statusDiv.textContent = "Not signed in.";
+  }
+});
         }
       }
     });
