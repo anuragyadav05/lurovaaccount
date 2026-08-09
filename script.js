@@ -15,7 +15,7 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-// Set Auth Persistence to LOCAL (Session stays across browser restarts)
+// Set Auth Persistence to LOCAL
 auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
 
 // Global variable for Phone Confirmation Result
@@ -29,10 +29,49 @@ let phoneConfirmationResult = null;
 })();
 
 // ==========================================================================
-// 2. CROSS-SUBDOMAIN POSTMESSAGE LISTENER (ads.lurova.life Auto-Login)
+// 2. POPUP TOAST NOTIFICATION HELPER FUNCTION
+// ==========================================================================
+function showToast(title, message, type = "success") {
+  const toast = document.getElementById("toastNotification");
+  const toastTitle = document.getElementById("toastTitle");
+  const toastMessage = document.getElementById("toastMessage");
+  const toastIcon = document.getElementById("toastIcon");
+
+  if (!toast || !toastTitle || !toastMessage) {
+    console.log(`[${type.toUpperCase()}] ${title}: ${message}`);
+    return;
+  }
+
+  toastTitle.textContent = title;
+  toastMessage.textContent = message;
+
+  // Reset classes
+  toast.className = "toast-notification";
+  toast.classList.add(`toast-${type}`);
+
+  // Set Dynamic Icon based on type
+  if (type === "success") {
+    toastIcon.innerHTML = `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+  } else if (type === "error") {
+    toastIcon.innerHTML = `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>`;
+  } else {
+    toastIcon.innerHTML = `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>`;
+  }
+
+  // Show Toast
+  toast.classList.remove("hidden");
+
+  // Auto-hide after 4 seconds
+  clearTimeout(window.toastTimer);
+  window.toastTimer = setTimeout(() => {
+    toast.classList.add("hidden");
+  }, 4000);
+}
+
+// ==========================================================================
+// 3. CROSS-SUBDOMAIN POSTMESSAGE LISTENER (ads.lurova.life Auto-Login)
 // ==========================================================================
 window.addEventListener('message', (event) => {
-  // Verify request origin comes from a lurova.life subdomain or localhost
   if (event.origin.includes('lurova.life') || event.origin.includes('localhost')) {
     if (event.data === 'CHECK_LUROVA_SESSION') {
       const savedUser = localStorage.getItem('lurova_account_user');
@@ -52,12 +91,11 @@ window.addEventListener('message', (event) => {
 });
 
 // ==========================================================================
-// 3. REDIRECT & SHARED COOKIE / LOCALSTORAGE FUNCTION
+// 4. REDIRECT & SHARED COOKIE / LOCALSTORAGE FUNCTION
 // ==========================================================================
 function onLoginSuccess(user, userData) {
   const email = user.email || '';
   
-  // Determine full user display name
   let name = "";
   if (userData && userData.firstName) {
     name = `${userData.firstName} ${userData.lastName || ''}`.trim();
@@ -73,7 +111,7 @@ function onLoginSuccess(user, userData) {
   // Store in LocalStorage for cross-tab availability & postMessage checks
   localStorage.setItem('lurova_account_user', JSON.stringify(userPayload));
 
-  // Set Root Domain Cookie (.lurova.life) for all sub-domains
+  // Set Root Domain Cookie (.lurova.life)
   const cookiePayload = JSON.stringify({ email, name, uid, phone });
   document.cookie = `lurova_user=${encodeURIComponent(cookiePayload)}; domain=.lurova.life; path=/; max-age=2592000; SameSite=Lax; Secure`;
 
@@ -92,7 +130,6 @@ function onLoginSuccess(user, userData) {
       finalUrl.searchParams.set('uid', uid);
       finalUrl.searchParams.set('safari_auth', 'true');
       
-      // Clean redirect without back-cache in mobile/Safari browsers
       window.location.replace(finalUrl.toString());
       return true;
     } catch (e) {
@@ -107,7 +144,7 @@ function onLoginSuccess(user, userData) {
 }
 
 // ==========================================================================
-// 4. CARD BRAND DETECTION HELPER
+// 5. CARD BRAND DETECTION HELPER
 // ==========================================================================
 function detectCardBrand(number) {
   const cleanNumber = number.replace(/\D/g, '');
@@ -120,7 +157,7 @@ function detectCardBrand(number) {
 }
 
 // ==========================================================================
-// 5. MAIN APPLICATION LOGIC
+// 6. MAIN APPLICATION LOGIC
 // ==========================================================================
 document.addEventListener("DOMContentLoaded", () => {
   // UI Canvas Containers
@@ -143,6 +180,14 @@ document.addEventListener("DOMContentLoaded", () => {
   const appleSignupBtn = document.getElementById("appleSignupBtn");
   const facebookLoginBtn = document.getElementById("facebookLoginBtn");
   const facebookSignupBtn = document.getElementById("facebookSignupBtn");
+
+  // Toast Notification Elements
+  const toastCloseBtn = document.getElementById("toastCloseBtn");
+  if (toastCloseBtn) {
+    toastCloseBtn.addEventListener("click", () => {
+      document.getElementById("toastNotification").classList.add("hidden");
+    });
+  }
 
   // Phone Auth Elements
   const loginWithPhoneOtpBtn = document.getElementById("loginWithPhoneOtpBtn");
@@ -297,7 +342,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const resetEmail = resetEmailInput ? resetEmailInput.value.trim().toLowerCase() : "";
 
       if (!resetEmail) {
-        alert("Please enter your registered email address.");
+        showToast("Error", "Please enter your registered email address.", "error");
         return;
       }
 
@@ -308,11 +353,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
       try {
         await auth.sendPasswordResetEmail(resetEmail);
-        alert("Password reset email sent! Please check your inbox for the link.");
+        showToast("Email Sent", "Password reset email sent! Check your inbox.", "success");
         forgotModal.classList.add("hidden");
         forgotPasswordForm.reset();
       } catch (error) {
-        alert("Reset Error: " + error.message);
+        showToast("Reset Error", error.message, "error");
       } finally {
         if (resetSubmitBtn) {
           resetSubmitBtn.disabled = false;
@@ -328,9 +373,9 @@ document.addEventListener("DOMContentLoaded", () => {
       if (user && user.email) {
         try {
           await auth.sendPasswordResetEmail(user.email);
-          alert(`Password reset link sent to ${user.email}!`);
+          showToast("Email Sent", `Password reset link sent to ${user.email}`, "success");
         } catch (error) {
-          alert("Error: " + error.message);
+          showToast("Error", error.message, "error");
         }
       }
     });
@@ -339,7 +384,6 @@ document.addEventListener("DOMContentLoaded", () => {
   /* ------------------------------------------------------------------------
      E. PHONE SMS OTP AUTHENTICATION (FIREBASE RECAPTCHA)
      ------------------------------------------------------------------------ */
-  // Initialize Invisible reCAPTCHA
   window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
     'size': 'invisible',
     'callback': (response) => {
@@ -367,7 +411,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const phoneNumber = document.getElementById("phoneAuthNumber").value.trim();
 
       if (!phoneNumber || phoneNumber.length < 10) {
-        alert("Please enter a valid phone number including country code (e.g. +919876543210).");
+        showToast("Invalid Input", "Please enter a valid phone number with country code.", "error");
         return;
       }
 
@@ -380,9 +424,9 @@ document.addEventListener("DOMContentLoaded", () => {
         
         phoneInputStep.classList.add("hidden");
         otpInputStep.classList.remove("hidden");
-        alert("OTP sent to " + phoneNumber);
+        showToast("OTP Sent", `Verification code sent to ${phoneNumber}`, "info");
       } catch (error) {
-        alert("SMS Send Error: " + error.message);
+        showToast("SMS Error", error.message, "error");
         window.recaptchaVerifier.render().then(widgetId => grecaptcha.reset(widgetId));
       } finally {
         sendOtpBtn.disabled = false;
@@ -397,7 +441,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const code = document.getElementById("otpCode").value.trim();
 
       if (!code || code.length !== 6) {
-        alert("Please enter the 6-digit OTP code received via SMS.");
+        showToast("Invalid OTP", "Please enter the 6-digit code received via SMS.", "error");
         return;
       }
 
@@ -417,13 +461,15 @@ document.addEventListener("DOMContentLoaded", () => {
           currentUserData = await handleNewSocialUserProfile(user);
         }
 
+        showToast("Success", "Phone authentication successful!", "success");
+
         const isRedirected = onLoginSuccess(user, currentUserData);
         if (!isRedirected) {
           populateProfileFields(currentUserData);
           switchToProfileView();
         }
       } catch (error) {
-        alert("OTP Verification Error: " + error.message);
+        showToast("OTP Error", error.message, "error");
       } finally {
         verifyOtpBtn.disabled = false;
         verifyOtpBtn.querySelector("span").textContent = "Verify & Sign In";
@@ -447,6 +493,8 @@ document.addEventListener("DOMContentLoaded", () => {
         currentUserData = await handleNewSocialUserProfile(user);
       }
 
+      showToast("Welcome", "Facebook login successful!", "success");
+
       const isRedirected = onLoginSuccess(user, currentUserData);
       if (!isRedirected) {
         populateProfileFields(currentUserData);
@@ -456,7 +504,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (error.code === 'auth/popup-blocked' || error.code === 'auth/popup-closed-by-user') {
         auth.signInWithRedirect(provider);
       } else {
-        alert("Facebook Auth Error: " + error.message);
+        showToast("Facebook Error", error.message, "error");
       }
     }
   }
@@ -496,7 +544,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const exp = document.getElementById("cardExpiry").value.trim();
 
       if (!name || !num || !exp) {
-        alert("Please fill out all card details.");
+        showToast("Error", "Please fill out all card details.", "error");
         return;
       }
 
@@ -525,9 +573,9 @@ document.addEventListener("DOMContentLoaded", () => {
         renderPaymentMethods(methods);
         cardModal.classList.add("hidden");
         addCardForm.reset();
-        alert("Card saved successfully!");
+        showToast("Saved", "Card details saved securely!", "success");
       } catch (err) {
-        alert("Error saving card: " + err.message);
+        showToast("Error", err.message, "error");
       }
     });
   }
@@ -543,7 +591,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const vpa = document.getElementById("upiId").value.trim();
 
       if (!accountName || !vpa) {
-        alert("Please fill out all UPI details.");
+        showToast("Error", "Please fill out all UPI details.", "error");
         return;
       }
 
@@ -567,9 +615,9 @@ document.addEventListener("DOMContentLoaded", () => {
         renderPaymentMethods(methods);
         upiModal.classList.add("hidden");
         addUpiForm.reset();
-        alert("UPI ID saved successfully!");
+        showToast("Saved", "UPI ID saved successfully!", "success");
       } catch (err) {
-        alert("Error saving UPI: " + err.message);
+        showToast("Error", err.message, "error");
       }
     });
   }
@@ -628,8 +676,9 @@ document.addEventListener("DOMContentLoaded", () => {
       await userRef.update({ paymentMethods: methods });
       currentUserData.paymentMethods = methods;
       renderPaymentMethods(methods);
+      showToast("Removed", "Payment method deleted.", "info");
     } catch (err) {
-      alert("Delete Error: " + err.message);
+      showToast("Error", err.message, "error");
     }
   };
 
@@ -787,11 +836,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const provider = new firebase.auth.GoogleAuthProvider();
     try {
       await auth.signInWithPopup(provider);
+      showToast("Success", "Logged in with Google", "success");
     } catch (error) {
       if (error.code === 'auth/popup-blocked' || error.code === 'auth/popup-closed-by-user') {
         auth.signInWithRedirect(provider);
       } else {
-        alert("Google Auth Error: " + error.message);
+        showToast("Google Auth Error", error.message, "error");
       }
     }
   }
@@ -800,11 +850,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const provider = new firebase.auth.OAuthProvider('apple.com');
     try {
       await auth.signInWithPopup(provider);
+      showToast("Success", "Logged in with Apple", "success");
     } catch (error) {
       if (error.code === 'auth/popup-blocked' || error.code === 'auth/popup-closed-by-user') {
         auth.signInWithRedirect(provider);
       } else {
-        alert("Apple Auth Error: " + error.message);
+        showToast("Apple Auth Error", error.message, "error");
       }
     }
   }
@@ -837,7 +888,7 @@ document.addEventListener("DOMContentLoaded", () => {
     signupForm.addEventListener("submit", async (e) => {
       e.preventDefault();
       if (!validatePasswords()) {
-        alert("Please make sure your passwords match.");
+        showToast("Error", "Please make sure your passwords match.", "error");
         return;
       }
 
@@ -848,7 +899,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const password = signupPassword ? signupPassword.value : "";
 
       if (!firstName || !lastName || !email || !phone || !password) {
-        alert("Please fill out all required registration fields.");
+        showToast("Missing Fields", "Please fill out all required registration fields.", "error");
         return;
       }
 
@@ -880,7 +931,7 @@ document.addEventListener("DOMContentLoaded", () => {
         await db.collection("users").doc(user.uid).set(userData);
         currentUserData = userData;
 
-        alert("LUROVA Account created successfully!");
+        showToast("Account Created", "LUROVA Account registered successfully!", "success");
 
         const isRedirected = onLoginSuccess(user, currentUserData);
         if (!isRedirected) {
@@ -888,7 +939,7 @@ document.addEventListener("DOMContentLoaded", () => {
           switchToProfileView();
         }
       } catch (error) {
-        alert("Registration Error: " + error.message);
+        showToast("Registration Error", error.message, "error");
       } finally {
         if (signupSubmitBtn) {
           signupSubmitBtn.disabled = false;
@@ -908,7 +959,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const password = passwordInput ? passwordInput.value : "";
 
       if (!identifier || !password) {
-        alert("Please enter both your Email/Phone and Password.");
+        showToast("Missing Credentials", "Please enter both your Email/Phone and Password.", "error");
         return;
       }
 
@@ -925,7 +976,7 @@ document.addEventListener("DOMContentLoaded", () => {
           if (!querySnapshot.empty) {
             targetEmail = querySnapshot.docs[0].data().email;
           } else {
-            alert("No registered user found with this phone number.");
+            showToast("User Not Found", "No registered user found with this phone number.", "error");
             if (loginSubmitBtn) {
               loginSubmitBtn.disabled = false;
               loginSubmitBtn.querySelector("span").textContent = "Login";
@@ -943,6 +994,8 @@ document.addEventListener("DOMContentLoaded", () => {
             currentUserData = doc.data();
           }
 
+          showToast("Success", "Logged in successfully!", "success");
+
           const isRedirected = onLoginSuccess(user, currentUserData);
 
           if (!isRedirected) {
@@ -951,7 +1004,7 @@ document.addEventListener("DOMContentLoaded", () => {
           }
         }
       } catch (error) {
-        alert("Login Error: " + error.message);
+        showToast("Login Error", error.message, "error");
       } finally {
         if (loginSubmitBtn) {
           loginSubmitBtn.disabled = false;
@@ -1059,9 +1112,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
         populateProfileFields(currentUserData);
         disableEditMode();
-        alert("Profile details updated successfully!");
+        showToast("Profile Updated", "Your details have been saved successfully!", "success");
       } catch (error) {
-        alert("Update Error: " + error.message);
+        showToast("Update Error", error.message, "error");
       }
     });
   }
@@ -1080,7 +1133,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (downloadDataBtn) {
     downloadDataBtn.addEventListener("click", () => {
-      alert("Your account data export request has been logged. An archive file will be prepared.");
+      showToast("Data Export Logged", "Your account export request has been created.", "info");
     });
   }
 
@@ -1094,8 +1147,9 @@ document.addEventListener("DOMContentLoaded", () => {
         document.cookie = "lurova_user=; domain=.lurova.life; path=/; max-age=0;";
         await auth.signOut();
         disableEditMode();
+        showToast("Logged Out", "You have been signed out.", "info");
       } catch (error) {
-        alert("Logout Error: " + error.message);
+        showToast("Logout Error", error.message, "error");
       }
     });
   }
@@ -1111,9 +1165,9 @@ document.addEventListener("DOMContentLoaded", () => {
           document.cookie = "lurova_user=; domain=.lurova.life; path=/; max-age=0;";
           await db.collection("users").doc(user.uid).delete();
           await user.delete();
-          alert("Your LUROVA Account has been permanently deleted.");
+          showToast("Account Deleted", "Your LUROVA Account was permanently deleted.", "info");
         } catch (error) {
-          alert("Delete Error: " + error.message);
+          showToast("Delete Error", error.message, "error");
         }
       }
     });
