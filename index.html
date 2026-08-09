@@ -616,6 +616,19 @@
     </div>
   </div>
 
+  <div class="toast-notification hidden" id="toastNotification">
+    <div class="toast-icon" id="toastIcon">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="20 6 9 17 4 12"></polyline>
+      </svg>
+    </div>
+    <div class="toast-body">
+      <h4 id="toastTitle">Notification</h4>
+      <p id="toastMessage">Action completed successfully.</p>
+    </div>
+    <button type="button" class="toast-close" id="toastCloseBtn" aria-label="Close notification">&times;</button>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
 
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
