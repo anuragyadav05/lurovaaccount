@@ -18,8 +18,9 @@ const db = firebase.firestore();
 // Set Auth Persistence to LOCAL
 auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
 
-// Global variable for Phone Confirmation Result
+// Global Variables
 let phoneConfirmationResult = null;
+let qrTimerInterval = null;
 
 // Initialize EmailJS Browser SDK (Optional)
 (function() {
@@ -45,11 +46,9 @@ function showToast(title, message, type = "success") {
   toastTitle.textContent = title;
   toastMessage.textContent = message;
 
-  // Reset classes
   toast.className = "toast-notification";
   toast.classList.add(`toast-${type}`);
 
-  // Set Dynamic Icon based on type
   if (type === "success") {
     toastIcon.innerHTML = `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
   } else if (type === "error") {
@@ -58,10 +57,8 @@ function showToast(title, message, type = "success") {
     toastIcon.innerHTML = `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>`;
   }
 
-  // Show Toast
   toast.classList.remove("hidden");
 
-  // Auto-hide after 4 seconds
   clearTimeout(window.toastTimer);
   window.toastTimer = setTimeout(() => {
     toast.classList.add("hidden");
@@ -108,14 +105,11 @@ function onLoginSuccess(user, userData) {
 
   const userPayload = { uid, email, displayName: name, phone };
 
-  // Store in LocalStorage for cross-tab availability & postMessage checks
   localStorage.setItem('lurova_account_user', JSON.stringify(userPayload));
 
-  // Set Root Domain Cookie (.lurova.life)
   const cookiePayload = JSON.stringify({ email, name, uid, phone });
   document.cookie = `lurova_user=${encodeURIComponent(cookiePayload)}; domain=.lurova.life; path=/; max-age=2592000; SameSite=Lax; Secure`;
 
-  // Check for Redirect Parameters (redirect_to, redirect_url, or redirect)
   const urlParams = new URLSearchParams(window.location.search);
   const redirectToParam = urlParams.get('redirect_to');
   const redirectUrl = urlParams.get('redirect_url') || urlParams.get('redirect') || redirectToParam;
@@ -181,7 +175,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const facebookLoginBtn = document.getElementById("facebookLoginBtn");
   const facebookSignupBtn = document.getElementById("facebookSignupBtn");
 
-  // Toast Notification Elements
+  // Toast Close Handler
   const toastCloseBtn = document.getElementById("toastCloseBtn");
   if (toastCloseBtn) {
     toastCloseBtn.addEventListener("click", () => {
@@ -219,7 +213,28 @@ document.addEventListener("DOMContentLoaded", () => {
   const savedPaymentMethodsGrid = document.getElementById("savedPaymentMethodsGrid");
   const transactionHistoryContainer = document.getElementById("transactionHistoryContainer");
 
-  // Forms
+  // Wallet & KYC Elements
+  const kycModal = document.getElementById("kycModal");
+  const openKycModalBtn = document.getElementById("openKycModalBtn");
+  const closeKycModal = document.getElementById("closeKycModal");
+  const aadhaarKycTab = document.getElementById("aadhaarKycTab");
+  const panKycTab = document.getElementById("panKycTab");
+  const aadhaarKycForm = document.getElementById("aadhaarKycForm");
+  const panKycForm = document.getElementById("panKycForm");
+  const walletMenuItem = document.getElementById("walletMenuItem");
+  const walletBalanceDisplay = document.getElementById("walletBalanceDisplay");
+  const verifiedKycDisplayBox = document.getElementById("verifiedKycDisplayBox");
+  const paymentWalletBanner = document.getElementById("paymentWalletBanner");
+  const walletBannerText = document.getElementById("walletBannerText");
+  const bonusDateCell = document.getElementById("bonusDateCell");
+
+  // Top-Up QR Modal Elements
+  const topupQrModal = document.getElementById("topupQrModal");
+  const openTopupQrBtn = document.getElementById("openTopupQrBtn");
+  const closeTopupQrModal = document.getElementById("closeTopupQrModal");
+  const qrCountdownTimer = document.getElementById("qrCountdownTimer");
+
+  // Forms & Inputs
   const loginForm = document.getElementById("loginForm");
   const signupForm = document.getElementById("signupForm");
   const profileDetailsForm = document.getElementById("profileDetailsForm");
@@ -386,9 +401,7 @@ document.addEventListener("DOMContentLoaded", () => {
      ------------------------------------------------------------------------ */
   window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
     'size': 'invisible',
-    'callback': (response) => {
-      // reCAPTCHA solved
-    }
+    'callback': (response) => {}
   });
 
   if (loginWithPhoneOtpBtn && phoneOtpModal) {
@@ -405,7 +418,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Step 1: Send SMS OTP
   if (sendOtpBtn) {
     sendOtpBtn.addEventListener("click", async () => {
       const phoneNumber = document.getElementById("phoneAuthNumber").value.trim();
@@ -435,7 +447,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Step 2: Verify SMS OTP
   if (verifyOtpBtn) {
     verifyOtpBtn.addEventListener("click", async () => {
       const code = document.getElementById("otpCode").value.trim();
@@ -513,7 +524,228 @@ document.addEventListener("DOMContentLoaded", () => {
   if (facebookSignupBtn) facebookSignupBtn.addEventListener("click", handleFacebookAuth);
 
   /* ------------------------------------------------------------------------
-     G. PAYMENT MODALS & CARD/UPI SAVING (FIRESTORE)
+     G. WALLET & KYC HANDLERS
+     ------------------------------------------------------------------------ */
+  if (openKycModalBtn) {
+    openKycModalBtn.addEventListener("click", () => {
+      kycModal.classList.remove("hidden");
+    });
+  }
+
+  if (closeKycModal) {
+    closeKycModal.addEventListener("click", () => {
+      kycModal.classList.add("hidden");
+    });
+  }
+
+  // Toggle Aadhaar vs PAN KYC View
+  if (aadhaarKycTab && panKycTab) {
+    aadhaarKycTab.addEventListener("click", () => {
+      aadhaarKycTab.classList.add("active");
+      panKycTab.classList.remove("active");
+      aadhaarKycForm.classList.remove("hidden");
+      panKycForm.classList.add("hidden");
+    });
+
+    panKycTab.addEventListener("click", () => {
+      panKycTab.classList.add("active");
+      aadhaarKycTab.classList.remove("active");
+      panKycForm.classList.remove("hidden");
+      aadhaarKycForm.classList.add("hidden");
+    });
+  }
+
+  // Submit Aadhaar KYC Form
+  if (aadhaarKycForm) {
+    aadhaarKycForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const user = auth.currentUser;
+      if (!user) return;
+
+      const num = document.getElementById("aadhaarNumber").value.trim();
+      const name = document.getElementById("aadhaarName").value.trim();
+      const fatherName = document.getElementById("aadhaarFatherName").value.trim();
+      const dob = document.getElementById("aadhaarDob").value;
+      const address = document.getElementById("aadhaarAddress").value.trim();
+
+      if (!num || !name || !fatherName || !dob || !address) {
+        showToast("Missing Fields", "Please complete all Aadhaar KYC fields.", "error");
+        return;
+      }
+
+      const kycData = {
+        type: "aadhaar",
+        aadhaarNumber: num.slice(-4) ? `•••• •••• ${num.slice(-4)}` : num,
+        name,
+        fatherName,
+        dob,
+        address,
+        status: "verified",
+        submittedAt: new Date().toLocaleDateString('en-IN')
+      };
+
+      await saveKycAndActivateWallet(user.uid, kycData);
+    });
+  }
+
+  // Submit PAN KYC Form
+  if (panKycForm) {
+    panKycForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const user = auth.currentUser;
+      if (!user) return;
+
+      const num = document.getElementById("panNumber").value.trim().toUpperCase();
+      const name = document.getElementById("panName").value.trim();
+      const dob = document.getElementById("panDob").value;
+
+      if (!num || !name || !dob) {
+        showToast("Missing Fields", "Please complete all PAN KYC fields.", "error");
+        return;
+      }
+
+      const kycData = {
+        type: "pan",
+        panNumber: num.slice(-4) ? `••••••${num.slice(-4)}` : num,
+        name,
+        dob,
+        status: "verified",
+        submittedAt: new Date().toLocaleDateString('en-IN')
+      };
+
+      await saveKycAndActivateWallet(user.uid, kycData);
+    });
+  }
+
+  // Save KYC to Firestore & Activate Wallet
+  async function saveKycAndActivateWallet(uid, kycData) {
+    try {
+      const userRef = db.collection("users").doc(uid);
+      await userRef.update({
+        walletActivated: true,
+        walletBalance: 20.00,
+        kycData: kycData
+      });
+
+      currentUserData.walletActivated = true;
+      currentUserData.walletBalance = 20.00;
+      currentUserData.kycData = kycData;
+
+      kycModal.classList.add("hidden");
+      renderWalletState(currentUserData);
+
+      showToast("Wallet Activated!", "₹20 Signup Bonus credited to your wallet balance.", "success");
+
+      // Automatically switch to Wallet tab panel
+      if (walletMenuItem) {
+        walletMenuItem.click();
+      }
+    } catch (err) {
+      showToast("KYC Error", err.message, "error");
+    }
+  }
+
+  // Render Wallet UI State
+  function renderWalletState(data) {
+    if (!data) return;
+
+    const isActivated = data.walletActivated || false;
+    const balance = (data.walletBalance !== undefined) ? data.walletBalance : 0.00;
+    const kyc = data.kycData || null;
+
+    if (isActivated) {
+      // Reveal Wallet item in Sidebar Menu
+      if (walletMenuItem) walletMenuItem.classList.remove("hidden");
+
+      // Update Balance
+      if (walletBalanceDisplay) walletBalanceDisplay.textContent = `₹${balance.toFixed(2)}`;
+
+      // Update Banner in Payment Tab
+      if (paymentWalletBanner && walletBannerText && openKycModalBtn) {
+        paymentWalletBanner.style.background = "#dcfce7";
+        paymentWalletBanner.style.borderColor = "#86efac";
+        paymentWalletBanner.style.color = "#166534";
+        walletBannerText.innerHTML = `Your wallet is active with <strong>₹${balance.toFixed(2)}</strong> balance.`;
+        openKycModalBtn.style.display = "none";
+      }
+
+      // Render Date in Signup Bonus Table
+      if (bonusDateCell) {
+        bonusDateCell.textContent = kyc ? kyc.submittedAt : "Today";
+      }
+
+      // Render Verified KYC Box (Non-Editable Format)
+      if (verifiedKycDisplayBox && kyc) {
+        if (kyc.type === "aadhaar") {
+          verifiedKycDisplayBox.innerHTML = `
+            <div class="kyc-field-row"><span>Document Type:</span><strong>Aadhaar Card (UID)</strong></div>
+            <div class="kyc-field-row"><span>Aadhaar Number:</span><strong>${kyc.aadhaarNumber}</strong></div>
+            <div class="kyc-field-row"><span>Full Name:</span><strong>${kyc.name}</strong></div>
+            <div class="kyc-field-row"><span>Father's Name:</span><strong>${kyc.fatherName}</strong></div>
+            <div class="kyc-field-row"><span>Date of Birth:</span><strong>${kyc.dob}</strong></div>
+            <div class="kyc-field-row"><span>Full Address:</span><strong>${kyc.address}</strong></div>
+            <div class="kyc-field-row"><span>Status:</span><strong style="color:#16a34a;">Verified ✅</strong></div>
+          `;
+        } else {
+          verifiedKycDisplayBox.innerHTML = `
+            <div class="kyc-field-row"><span>Document Type:</span><strong>PAN Card</strong></div>
+            <div class="kyc-field-row"><span>PAN Number:</span><strong>${kyc.panNumber}</strong></div>
+            <div class="kyc-field-row"><span>Full Name:</span><strong>${kyc.name}</strong></div>
+            <div class="kyc-field-row"><span>Date of Birth:</span><strong>${kyc.dob}</strong></div>
+            <div class="kyc-field-row"><span>Status:</span><strong style="color:#16a34a;">Verified ✅</strong></div>
+          `;
+        }
+      }
+    } else {
+      if (walletMenuItem) walletMenuItem.classList.add("hidden");
+    }
+  }
+
+  /* ------------------------------------------------------------------------
+     H. TOP-UP QR SCANNER MODAL & 5-MINUTE COUNTDOWN TIMER
+     ------------------------------------------------------------------------ */
+  if (openTopupQrBtn && topupQrModal) {
+    openTopupQrBtn.addEventListener("click", () => {
+      topupQrModal.classList.remove("hidden");
+      startQrCountdown(300); // 5 minutes = 300 seconds
+    });
+  }
+
+  if (closeTopupQrModal && topupQrModal) {
+    closeTopupQrModal.addEventListener("click", () => {
+      topupQrModal.classList.add("hidden");
+      clearInterval(qrTimerInterval);
+    });
+  }
+
+  function startQrCountdown(durationInSeconds) {
+    clearInterval(qrTimerInterval);
+    let timer = durationInSeconds;
+
+    function updateDisplay() {
+      const minutes = Math.floor(timer / 60);
+      const seconds = timer % 60;
+
+      const formattedMin = minutes < 10 ? "0" + minutes : minutes;
+      const formattedSec = seconds < 10 ? "0" + seconds : seconds;
+
+      if (qrCountdownTimer) {
+        qrCountdownTimer.textContent = `${formattedMin}:${formattedSec}`;
+      }
+
+      if (--timer < 0) {
+        clearInterval(qrTimerInterval);
+        if (topupQrModal) topupQrModal.classList.add("hidden");
+        showToast("Session Expired", "QR Top-Up payment session expired after 5 minutes.", "info");
+      }
+    }
+
+    updateDisplay();
+    qrTimerInterval = setInterval(updateDisplay, 1000);
+  }
+
+  /* ------------------------------------------------------------------------
+     I. PAYMENT MODALS & CARD/UPI SAVING (FIRESTORE)
      ------------------------------------------------------------------------ */
   if (openCardModalBtn) openCardModalBtn.addEventListener("click", () => cardModal.classList.remove("hidden"));
   if (openUpiModalBtn) openUpiModalBtn.addEventListener("click", () => upiModal.classList.remove("hidden"));
@@ -720,7 +952,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /* ------------------------------------------------------------------------
-     H. FIREBASE AUTH STATE OBSERVER
+     J. FIREBASE AUTH STATE OBSERVER
      ------------------------------------------------------------------------ */
   auth.onAuthStateChanged(async (user) => {
     if (user) {
@@ -741,6 +973,7 @@ document.addEventListener("DOMContentLoaded", () => {
           renderAccurateActiveDevices();
           renderPaymentMethods(currentUserData.paymentMethods || []);
           renderTransactionHistory(currentUserData.transactions || []);
+          renderWalletState(currentUserData);
           switchToProfileView();
         }
       } catch (error) {
@@ -754,7 +987,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   /* ------------------------------------------------------------------------
-     I. ACCURATE DEVICE & OS PARSING
+     K. ACCURATE DEVICE & OS PARSING
      ------------------------------------------------------------------------ */
   function parseAccurateUserAgent() {
     const ua = navigator.userAgent;
@@ -807,7 +1040,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /* ------------------------------------------------------------------------
-     J. GOOGLE & APPLE AUTH
+     L. GOOGLE & APPLE AUTH
      ------------------------------------------------------------------------ */
   async function handleNewSocialUserProfile(user) {
     const nameParts = (user.displayName || "").split(" ");
@@ -825,6 +1058,9 @@ document.addEventListener("DOMContentLoaded", () => {
       gender: "",
       paymentMethods: [],
       transactions: [],
+      walletActivated: false,
+      walletBalance: 0,
+      kycData: null,
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     };
 
@@ -866,7 +1102,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (appleSignupBtn) appleSignupBtn.addEventListener("click", handleAppleAuth);
 
   /* ------------------------------------------------------------------------
-     K. LIVE PASSWORD VALIDATION & FORM SUBMISSIONS
+     M. LIVE PASSWORD VALIDATION & FORM SUBMISSIONS
      ------------------------------------------------------------------------ */
   function validatePasswords() {
     if (!signupPassword || !confirmPassword || !passwordMatchError) return true;
@@ -925,6 +1161,9 @@ document.addEventListener("DOMContentLoaded", () => {
           gender: "",
           paymentMethods: [],
           transactions: [],
+          walletActivated: false,
+          walletBalance: 0,
+          kycData: null,
           createdAt: firebase.firestore.FieldValue.serverTimestamp()
         };
 
@@ -1015,7 +1254,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /* ------------------------------------------------------------------------
-     L. POPULATE & RENDER PROFILE FIELDS
+     N. POPULATE & RENDER PROFILE FIELDS
      ------------------------------------------------------------------------ */
   function populateProfileFields(data) {
     if (!data) return;
@@ -1060,7 +1299,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /* ------------------------------------------------------------------------
-     M. EDIT, SAVE, & CANCEL PROFILE DETAILS
+     O. EDIT, SAVE, & CANCEL PROFILE DETAILS
      ------------------------------------------------------------------------ */
   if (editToggleBtn) {
     editToggleBtn.addEventListener("click", () => {
@@ -1138,7 +1377,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /* ------------------------------------------------------------------------
-     N. LOGOUT & DELETE ACCOUNT
+     P. LOGOUT & DELETE ACCOUNT
      ------------------------------------------------------------------------ */
   if (logoutBtn) {
     logoutBtn.addEventListener("click", async () => {
