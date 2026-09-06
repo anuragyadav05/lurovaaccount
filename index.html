@@ -11,7 +11,7 @@
 </head>
 <body>
 
-  <!-- Dynamic Ambient Background Art -->
+  <!-- Background Art Overlay -->
   <div class="bg-art-container" id="bgArt">
     <div class="bg-gradient-overlay"></div>
     <div class="dot-pattern grid-1"></div>
@@ -28,10 +28,10 @@
     <div class="sphere sphere-3"></div>
   </div>
 
-  <!-- Main Canvas -->
+  <!-- Main Viewport Canvas -->
   <main class="app-canvas" id="appCanvas">
 
-    <!-- 1. AUTHENTICATION CARD -->
+    <!-- 1. AUTHENTICATION VIEW -->
     <div class="auth-card" id="authCard">
       <div class="form-container">
         <header class="brand-header">
@@ -191,7 +191,7 @@
         </div>
       </div>
 
-      <!-- RIGHT SIDE: Abstract Art Banner (Desktop Only) -->
+      <!-- Banner Artwork (Desktop) -->
       <div class="banner-container">
         <svg class="wave-divider" viewBox="0 0 120 800" preserveAspectRatio="none">
           <path d="M 0,0 C 90,200 120,400 0,800 L 0,0 Z" fill="#ffffff"></path>
@@ -211,10 +211,8 @@
       </div>
     </div>
 
-    <!-- 2. DASHBOARD / PROFILE PAGE -->
+    <!-- 2. DASHBOARD VIEW -->
     <div class="dashboard-container hidden" id="profileCard">
-      
-      <!-- LEFT SIDEBAR -->
       <aside class="dashboard-sidebar">
         <div class="sidebar-brand">
           <img src="https://plain-apac-prod-public.komododecks.com/202607/23/yYdBFLQn5cU9AT4rDJ7v/image.png" alt="LUROVA Logo" class="sidebar-logo" />
@@ -248,7 +246,7 @@
           </div>
         </div>
 
-        <!-- Sidebar Navigation Menu -->
+        <!-- Sidebar Navigation -->
         <nav class="sidebar-menu">
           <button type="button" class="menu-item active" data-tab="tab-profile">
             <svg class="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -285,7 +283,7 @@
             <span>Payment & Subscriptions</span>
           </button>
 
-          <!-- Activated via KYC -->
+          <!-- Activated after KYC verification -->
           <button type="button" class="menu-item hidden" id="walletMenuItem" data-tab="tab-wallet">
             <svg class="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <rect x="2" y="4" width="20" height="16" rx="2"></rect>
@@ -317,7 +315,7 @@
         </div>
       </aside>
 
-      <!-- RIGHT CONTENT PANELS -->
+      <!-- Viewport Content -->
       <section class="dashboard-content">
 
         <!-- TAB 1: PROFILE DETAILS -->
@@ -383,9 +381,7 @@
             </div>
           </div>
 
-          <div class="devices-list" id="devicesListContainer">
-            <!-- Dynamic Devices Rendered by JS -->
-          </div>
+          <div class="devices-list" id="devicesListContainer"></div>
         </div>
 
         <!-- TAB 3: LINKED APPS -->
@@ -445,7 +441,6 @@
             </div>
           </div>
 
-          <!-- WALLET ACTIVATION BANNER -->
           <div class="wallet-banner" id="paymentWalletBanner">
             <div class="wallet-icon">
               <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
@@ -460,7 +455,6 @@
             <button type="button" class="btn btn-primary btn-sm" id="openKycModalBtn">Activate Wallet</button>
           </div>
 
-          <!-- SAVED PAYMENT METHODS -->
           <div class="payment-section">
             <div class="section-title-row">
               <h3>Saved Payment Methods</h3>
@@ -470,21 +464,16 @@
               </div>
             </div>
 
-            <div class="payment-methods-grid" id="savedPaymentMethodsGrid">
-              <!-- Dynamically populated from Firestore -->
-            </div>
+            <div class="payment-methods-grid" id="savedPaymentMethodsGrid"></div>
           </div>
 
-          <!-- TRANSACTION HISTORY -->
           <div class="payment-section">
             <h3>Recent Transaction History</h3>
-            <div class="history-table-wrapper" id="transactionHistoryContainer">
-              <!-- Shows "Transaction history not available" if empty -->
-            </div>
+            <div class="history-table-wrapper" id="transactionHistoryContainer"></div>
           </div>
         </div>
 
-        <!-- TAB 7: DEDICATED WALLET TAB PANEL -->
+        <!-- TAB 7: WALLET -->
         <div class="tab-panel" id="tab-wallet">
           <div class="panel-header">
             <div>
@@ -493,7 +482,6 @@
             </div>
           </div>
 
-          <!-- WALLET BALANCE CARD -->
           <div class="wallet-balance-card">
             <div class="balance-info">
               <span class="balance-label">Current Balance</span>
@@ -509,7 +497,6 @@
             </button>
           </div>
 
-          <!-- TOP-UP HISTORY -->
           <div class="payment-section" style="margin-top: 24px;">
             <h3>Wallet Transaction History</h3>
             <div class="history-table-wrapper" id="walletHistoryContainer">
@@ -536,12 +523,9 @@
             </div>
           </div>
 
-          <!-- NON-EDITABLE KYC DISPLAY -->
           <div class="payment-section" style="margin-top: 24px;">
             <h3>Verified KYC Details</h3>
-            <div class="kyc-display-box" id="verifiedKycDisplayBox">
-              <!-- Rendered non-editable by JS after KYC verification -->
-            </div>
+            <div class="kyc-display-box" id="verifiedKycDisplayBox"></div>
           </div>
         </div>
 
@@ -749,7 +733,7 @@
       <form id="aadhaarKycForm" class="kyc-form-view" novalidate style="display: flex; flex-direction: column; gap: 10px; margin-top: 12px;">
         <div class="input-group">
           <label for="aadhaarNumber">Aadhaar Number / UID</label>
-          <input type="text" id="aadhaarNumber" placeholder="12-digit UID" maxlength="14" required />
+          <input type="text" id="aadhaarNumber" placeholder="Enter Aadhaar Number" maxlength="14" required />
         </div>
 
         <div class="input-group">
@@ -826,7 +810,7 @@
     </div>
   </div>
 
-  <!-- BARCODE POPUP MODAL -->
+  <!-- BARCODE MODAL -->
   <div class="modal-overlay hidden" id="barcodeModal">
     <div class="modal-card" style="text-align: center; max-width: 380px;">
       <button type="button" class="close-modal-btn" id="closeBarcodeModal">&times;</button>
@@ -846,7 +830,7 @@
     </div>
   </div>
 
-  <!-- TOAST NOTIFICATION BOX -->
+  <!-- TOAST NOTIFICATION CONTAINER -->
   <div class="toast-notification hidden" id="toastNotification">
     <div class="toast-icon" id="toastIcon">
       <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -860,15 +844,11 @@
     <button type="button" class="toast-close" id="toastCloseBtn" aria-label="Close notification">&times;</button>
   </div>
 
-  <!-- EmailJS Browser SDK -->
+  <!-- Script Inclusions -->
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
-
-  <!-- FIREBASE SDKs (v10+ Compatibility Mode) -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
-
-  <!-- Application Script -->
   <script src="script.js"></script>
 </body>
 </html>
