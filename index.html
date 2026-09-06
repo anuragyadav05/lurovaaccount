@@ -11,6 +11,7 @@
 </head>
 <body>
 
+  <!-- Dynamic Ambient Background Art -->
   <div class="bg-art-container" id="bgArt">
     <div class="bg-gradient-overlay"></div>
     <div class="dot-pattern grid-1"></div>
@@ -27,24 +28,26 @@
     <div class="sphere sphere-3"></div>
   </div>
 
+  <!-- Main Canvas -->
   <main class="app-canvas" id="appCanvas">
 
+    <!-- 1. AUTHENTICATION CARD -->
     <div class="auth-card" id="authCard">
       <div class="form-container">
         <header class="brand-header">
           <img src="https://plain-apac-prod-public.komododecks.com/202607/23/yYdBFLQn5cU9AT4rDJ7v/image.png" alt="LUROVA Logo" class="brand-logo" />
           <div class="brand-intro">
-            <span>Welcome to</span>
-            <h1 class="color-change-text">LUROVA</h1>
-            <p>Please login or register to your account.</p>
+            <span>We are</span>
+            <h1 class="color-change-text">Abstract World</h1>
+            <p>Welcome back, Please login or register to your account.</p>
           </div>
         </header>
 
         <div class="form-viewport">
           <div class="form-track" id="formTrack">
 
+            <!-- LOGIN FORM -->
             <form class="auth-form tight-gap" id="loginForm" novalidate>
-              
               <div class="social-login-grid">
                 <button type="button" class="social-btn google-btn" id="googleLoginBtn">
                   <svg class="social-icon" viewBox="0 0 24 24">
@@ -96,7 +99,7 @@
 
               <button type="button" class="btn btn-phone-otp" id="loginWithPhoneOtpBtn">
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
-                  <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+                  <rect x="5" y="2" width="14" height="20" rx="2"></rect>
                   <line x1="12" y1="18" x2="12.01" y2="18"></line>
                 </svg>
                 <span>Login via Phone SMS OTP</span>
@@ -111,8 +114,8 @@
               </div>
             </form>
 
+            <!-- REGISTRATION FORM -->
             <form class="auth-form" id="signupForm" novalidate>
-              
               <div class="social-login-grid">
                 <button type="button" class="social-btn google-btn" id="googleSignupBtn">
                   <svg class="social-icon" viewBox="0 0 24 24">
@@ -188,6 +191,7 @@
         </div>
       </div>
 
+      <!-- RIGHT SIDE: Abstract Art Banner (Desktop Only) -->
       <div class="banner-container">
         <svg class="wave-divider" viewBox="0 0 120 800" preserveAspectRatio="none">
           <path d="M 0,0 C 90,200 120,400 0,800 L 0,0 Z" fill="#ffffff"></path>
@@ -207,12 +211,25 @@
       </div>
     </div>
 
+    <!-- 2. DASHBOARD / PROFILE PAGE -->
     <div class="dashboard-container hidden" id="profileCard">
       
+      <!-- LEFT SIDEBAR -->
       <aside class="dashboard-sidebar">
         <div class="sidebar-brand">
           <img src="https://plain-apac-prod-public.komododecks.com/202607/23/yYdBFLQn5cU9AT4rDJ7v/image.png" alt="LUROVA Logo" class="sidebar-logo" />
-          <span class="account-tag">Central ID</span>
+          
+          <!-- Flippable Central ID Badge -->
+          <div class="id-flip-wrapper" id="idFlipWrapper" title="Click to reveal your Unique 7-Digit ID">
+            <div class="id-flip-inner">
+              <div class="id-face id-front">
+                <span class="account-tag">Central ID</span>
+              </div>
+              <div class="id-face id-back">
+                <span class="account-tag unique-id-tag" id="uniqueIdDisplay">-------</span>
+              </div>
+            </div>
+          </div>
         </div>
 
         <button type="button" class="btn-back" id="profileBackBtn" aria-label="Go Back">
@@ -231,6 +248,7 @@
           </div>
         </div>
 
+        <!-- Sidebar Navigation Menu -->
         <nav class="sidebar-menu">
           <button type="button" class="menu-item active" data-tab="tab-profile">
             <svg class="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -242,7 +260,7 @@
 
           <button type="button" class="menu-item" data-tab="tab-devices">
             <svg class="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+              <rect x="2" y="3" width="20" height="14" rx="2"></rect>
               <line x1="8" y1="21" x2="16" y2="21"></line>
               <line x1="12" y1="17" x2="12" y2="21"></line>
             </svg>
@@ -261,12 +279,13 @@
 
           <button type="button" class="menu-item" data-tab="tab-payment">
             <svg class="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="1" y="4" width="22" height="16" rx="2" ry="2"></rect>
+              <rect x="1" y="4" width="22" height="16" rx="2"></rect>
               <line x1="1" y1="10" x2="23" y2="10"></line>
             </svg>
             <span>Payment & Subscriptions</span>
           </button>
 
+          <!-- Activated via KYC -->
           <button type="button" class="menu-item hidden" id="walletMenuItem" data-tab="tab-wallet">
             <svg class="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
               <rect x="2" y="4" width="20" height="16" rx="2"></rect>
@@ -278,7 +297,7 @@
 
           <button type="button" class="menu-item" data-tab="tab-password">
             <svg class="menu-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+              <rect x="3" y="11" width="18" height="11" rx="2"></rect>
               <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
             </svg>
             <span>Reset Password</span>
@@ -298,8 +317,10 @@
         </div>
       </aside>
 
+      <!-- RIGHT CONTENT PANELS -->
       <section class="dashboard-content">
 
+        <!-- TAB 1: PROFILE DETAILS -->
         <div class="tab-panel active" id="tab-profile">
           <div class="panel-header">
             <div>
@@ -353,6 +374,7 @@
           </form>
         </div>
 
+        <!-- TAB 2: LOGIN DEVICES -->
         <div class="tab-panel" id="tab-devices">
           <div class="panel-header">
             <div>
@@ -362,9 +384,11 @@
           </div>
 
           <div class="devices-list" id="devicesListContainer">
-            </div>
+            <!-- Dynamic Devices Rendered by JS -->
+          </div>
         </div>
 
+        <!-- TAB 3: LINKED APPS -->
         <div class="tab-panel" id="tab-apps">
           <div class="panel-header">
             <div>
@@ -412,6 +436,7 @@
           </div>
         </div>
 
+        <!-- TAB 4: PAYMENT & SUBSCRIPTIONS -->
         <div class="tab-panel" id="tab-payment">
           <div class="panel-header">
             <div>
@@ -420,6 +445,7 @@
             </div>
           </div>
 
+          <!-- WALLET ACTIVATION BANNER -->
           <div class="wallet-banner" id="paymentWalletBanner">
             <div class="wallet-icon">
               <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2">
@@ -429,11 +455,12 @@
             </div>
             <div class="wallet-banner-content">
               <h4>LUROVA Wallet</h4>
-              <p id="walletBannerText">Activate your LUROVA Wallet with quick KYC verification to receive ₹20 signup bonus!</p>
+              <p id="walletBannerText">Activate your LUROVA Wallet with KYC verification to receive ₹20 signup bonus!</p>
             </div>
             <button type="button" class="btn btn-primary btn-sm" id="openKycModalBtn">Activate Wallet</button>
           </div>
 
+          <!-- SAVED PAYMENT METHODS -->
           <div class="payment-section">
             <div class="section-title-row">
               <h3>Saved Payment Methods</h3>
@@ -444,24 +471,29 @@
             </div>
 
             <div class="payment-methods-grid" id="savedPaymentMethodsGrid">
-              </div>
+              <!-- Dynamically populated from Firestore -->
+            </div>
           </div>
 
+          <!-- TRANSACTION HISTORY -->
           <div class="payment-section">
             <h3>Recent Transaction History</h3>
             <div class="history-table-wrapper" id="transactionHistoryContainer">
-              </div>
+              <!-- Shows "Transaction history not available" if empty -->
+            </div>
           </div>
         </div>
 
+        <!-- TAB 7: DEDICATED WALLET TAB PANEL -->
         <div class="tab-panel" id="tab-wallet">
           <div class="panel-header">
             <div>
               <h2>LUROVA Wallet</h2>
-              <p>Your digital wallet balance, instant top-ups, and cashback rewards.</p>
+              <p>Your digital wallet balance, instant top-ups, and rewards.</p>
             </div>
           </div>
 
+          <!-- WALLET BALANCE CARD -->
           <div class="wallet-balance-card">
             <div class="balance-info">
               <span class="balance-label">Current Balance</span>
@@ -477,6 +509,7 @@
             </button>
           </div>
 
+          <!-- TOP-UP HISTORY -->
           <div class="payment-section" style="margin-top: 24px;">
             <h3>Wallet Transaction History</h3>
             <div class="history-table-wrapper" id="walletHistoryContainer">
@@ -503,13 +536,16 @@
             </div>
           </div>
 
+          <!-- NON-EDITABLE KYC DISPLAY -->
           <div class="payment-section" style="margin-top: 24px;">
             <h3>Verified KYC Details</h3>
             <div class="kyc-display-box" id="verifiedKycDisplayBox">
-              </div>
+              <!-- Rendered non-editable by JS after KYC verification -->
+            </div>
           </div>
         </div>
 
+        <!-- TAB 5: RESET PASSWORD -->
         <div class="tab-panel" id="tab-password">
           <div class="panel-header">
             <div>
@@ -526,6 +562,7 @@
           </div>
         </div>
 
+        <!-- TAB 6: DATA & PRIVACY -->
         <div class="tab-panel" id="tab-privacy">
           <div class="panel-header">
             <div>
@@ -554,6 +591,7 @@
 
   </main>
 
+  <!-- FORGOT PASSWORD MODAL -->
   <div class="modal-overlay hidden" id="forgotModal">
     <div class="modal-card">
       <button type="button" class="close-modal-btn" id="closeForgotModal" aria-label="Close modal">&times;</button>
@@ -578,6 +616,7 @@
     </div>
   </div>
 
+  <!-- ADD CARD MODAL -->
   <div class="modal-overlay hidden" id="cardModal">
     <div class="modal-card">
       <button type="button" class="close-modal-btn" id="closeCardModal">&times;</button>
@@ -619,6 +658,7 @@
     </div>
   </div>
 
+  <!-- ADD UPI MODAL -->
   <div class="modal-overlay hidden" id="upiModal">
     <div class="modal-card">
       <button type="button" class="close-modal-btn" id="closeUpiModal">&times;</button>
@@ -646,6 +686,7 @@
     </div>
   </div>
 
+  <!-- PHONE SMS OTP MODAL -->
   <div class="modal-overlay hidden" id="phoneOtpModal">
     <div class="modal-card">
       <button type="button" class="close-modal-btn" id="closePhoneOtpModal">&times;</button>
@@ -654,6 +695,7 @@
         <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 14px;">Enter your phone number to receive a 6-digit SMS verification code.</p>
       </div>
 
+      <!-- Step A: Phone Input -->
       <div id="phoneInputStep" style="display: flex; flex-direction: column; gap: 12px;">
         <div class="input-group">
           <label for="phoneAuthNumber">Phone Number (with Country Code)</label>
@@ -668,6 +710,7 @@
         </button>
       </div>
 
+      <!-- Step B: OTP Input -->
       <div id="otpInputStep" class="hidden" style="display: flex; flex-direction: column; gap: 12px;">
         <div class="input-group">
           <label for="otpCode">6-Digit Verification Code</label>
@@ -682,6 +725,7 @@
     </div>
   </div>
 
+  <!-- KYC VERIFICATION MODAL -->
   <div class="modal-overlay hidden" id="kycModal">
     <div class="modal-card" style="max-width: 480px;">
       <button type="button" class="close-modal-btn" id="closeKycModal">&times;</button>
@@ -701,10 +745,11 @@
         </label>
       </div>
 
+      <!-- Aadhaar Form -->
       <form id="aadhaarKycForm" class="kyc-form-view" novalidate style="display: flex; flex-direction: column; gap: 10px; margin-top: 12px;">
         <div class="input-group">
           <label for="aadhaarNumber">Aadhaar Number / UID</label>
-          <input type="text" id="aadhaarNumber" placeholder="1234 5678 9012" maxlength="14" required />
+          <input type="text" id="aadhaarNumber" placeholder="12-digit UID" maxlength="14" required />
         </div>
 
         <div class="input-group">
@@ -735,6 +780,7 @@
         </button>
       </form>
 
+      <!-- PAN Form -->
       <form id="panKycForm" class="kyc-form-view hidden" novalidate style="display: flex; flex-direction: column; gap: 10px; margin-top: 12px;">
         <div class="input-group">
           <label for="panNumber">PAN Card Number</label>
@@ -759,12 +805,13 @@
     </div>
   </div>
 
+  <!-- TOP-UP QR MODAL -->
   <div class="modal-overlay hidden" id="topupQrModal">
     <div class="modal-card" style="text-align: center; max-width: 400px;">
       <button type="button" class="close-modal-btn" id="closeTopupQrModal">&times;</button>
       
       <h2 style="font-size: 1.2rem; font-weight: 800; color: var(--text-dark); margin-bottom: 4px;">Scan & Top-Up Wallet</h2>
-      <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 12px;">Scan the QR code using GPay, PhonePe, or Paytm to add funds.</p>
+      <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 12px;">Scan the QR code using UPI to add funds.</p>
 
       <div class="qr-container">
         <img src="https://plain-apac-prod-public.komododecks.com/202608/09/OXGgJ5amyzl0EOL3hYSC/image.png" alt="LUROVA Top-Up QR Code" class="topup-qr-image" />
@@ -779,6 +826,27 @@
     </div>
   </div>
 
+  <!-- BARCODE POPUP MODAL -->
+  <div class="modal-overlay hidden" id="barcodeModal">
+    <div class="modal-card" style="text-align: center; max-width: 380px;">
+      <button type="button" class="close-modal-btn" id="closeBarcodeModal">&times;</button>
+      <div class="form-header">
+        <h2 style="font-size: 1.25rem; font-weight: 800; color: var(--text-dark); margin-bottom: 4px;">LUROVA Digital ID</h2>
+        <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 16px;">Scan this barcode across LUROVA services</p>
+      </div>
+
+      <div class="barcode-card">
+        <svg id="barcodeSvg" class="barcode-svg" preserveAspectRatio="none"></svg>
+        <div class="barcode-number" id="barcodeNumberText">0000000</div>
+      </div>
+
+      <p style="font-size: 0.72rem; color: var(--text-muted); margin-top: 14px;">
+        Verified Central Identity Token
+      </p>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION BOX -->
   <div class="toast-notification hidden" id="toastNotification">
     <div class="toast-icon" id="toastIcon">
       <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -792,12 +860,15 @@
     <button type="button" class="toast-close" id="toastCloseBtn" aria-label="Close notification">&times;</button>
   </div>
 
+  <!-- EmailJS Browser SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
 
+  <!-- FIREBASE SDKs (v10+ Compatibility Mode) -->
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
+  <!-- Application Script -->
   <script src="script.js"></script>
 </body>
 </html>
