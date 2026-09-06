@@ -18,9 +18,10 @@ const db = firebase.firestore();
 // Set Auth Persistence to LOCAL
 auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
 
-// Global Variables
+// Global State
 let phoneConfirmationResult = null;
 let qrTimerInterval = null;
+let currentUniqueId = "";
 
 // Initialize EmailJS Browser SDK (Optional)
 (function() {
@@ -138,8 +139,86 @@ function onLoginSuccess(user, userData) {
 }
 
 // ==========================================================================
-// 5. CARD BRAND DETECTION HELPER
+// 5. 7-DIGIT UNIQUE ID GENERATOR & SVG BARCODE RENDERER
 // ==========================================================================
+async function getOrCreateUserSevenDigitId(user) {
+  if (!user) return "1000001";
+
+  try {
+    const userDocRef = db.collection("users").doc(user.uid);
+    const doc = await userDocRef.get();
+
+    if (doc.exists && doc.data().uniqueIdNumber) {
+      return doc.data().uniqueIdNumber;
+    }
+
+    const randomSevenDigit = Math.floor(1000000 + Math.random() * 9000000).toString();
+    await userDocRef.set({ uniqueIdNumber: randomSevenDigit }, { merge: true });
+    return randomSevenDigit;
+  } catch (err) {
+    console.error("Error creating 7-digit ID:", err);
+    let hash = 0;
+    for (let i = 0; i < user.uid.length; i++) {
+      hash = (hash << 5) - hash + user.uid.charCodeAt(i);
+      hash |= 0;
+    }
+    return Math.abs(hash % 9000000 + 1000000).toString();
+  }
+}
+
+function drawBarcode(svgElement, codeString) {
+  svgElement.innerHTML = '';
+  const barPattern = [
+    [2,1,1,2,3,2], [2,2,2,1,1,3], [1,3,1,2,2,2], [3,1,1,2,2,2],
+    [2,3,1,1,2,2], [2,2,1,1,1,4], [2,1,4,1,1,2], [2,2,3,2,1,1],
+    [4,1,1,1,2,2], [2,1,3,1,2,2]
+  ];
+
+  let x = 12;
+  const height = 70;
+
+  const guard = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+  guard.setAttribute("x", x);
+  guard.setAttribute("y", "0");
+  guard.setAttribute("width", "3");
+  guard.setAttribute("height", height);
+  guard.setAttribute("fill", "#0f172a");
+  svgElement.appendChild(guard);
+  x += 6;
+
+  for (let i = 0; i < codeString.length; i++) {
+    const digit = parseInt(codeString[i], 10) || 0;
+    const pattern = barPattern[digit];
+
+    for (let j = 0; j < pattern.length; j++) {
+      const width = pattern[j] * 1.5;
+      if (j % 2 === 0) {
+        const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        rect.setAttribute("x", x);
+        rect.setAttribute("y", "0");
+        rect.setAttribute("width", width.toString());
+        rect.setAttribute("height", height.toString());
+        rect.setAttribute("fill", "#0f172a");
+        svgElement.appendChild(rect);
+      }
+      x += width;
+    }
+    x += 2;
+  }
+
+  const endGuard = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+  endGuard.setAttribute("x", x);
+  endGuard.setAttribute("y", "0");
+  endGuard.setAttribute("width", "3");
+  endGuard.setAttribute("height", height);
+  endGuard.setAttribute("fill", "#0f172a");
+  svgElement.appendChild(endGuard);
+  x += 12;
+
+  svgElement.setAttribute("viewBox", `0 0 ${x} ${height}`);
+}
+
+// Card Brand Helper
 function detectCardBrand(number) {
   const cleanNumber = number.replace(/\D/g, '');
   if (/^4/.test(cleanNumber)) return "Visa";
@@ -154,7 +233,7 @@ function detectCardBrand(number) {
 // 6. MAIN APPLICATION LOGIC
 // ==========================================================================
 document.addEventListener("DOMContentLoaded", () => {
-  // UI Canvas Containers
+  // Canvas Containers
   const bgArt = document.getElementById("bgArt");
   const authCard = document.getElementById("authCard");
   const profileCard = document.getElementById("profileCard");
@@ -233,6 +312,14 @@ document.addEventListener("DOMContentLoaded", () => {
   const openTopupQrBtn = document.getElementById("openTopupQrBtn");
   const closeTopupQrModal = document.getElementById("closeTopupQrModal");
   const qrCountdownTimer = document.getElementById("qrCountdownTimer");
+
+  // 3D Flip ID & Barcode Modal Elements
+  const idFlipWrapper = document.getElementById("idFlipWrapper");
+  const uniqueIdDisplay = document.getElementById("uniqueIdDisplay");
+  const barcodeModal = document.getElementById("barcodeModal");
+  const closeBarcodeModal = document.getElementById("closeBarcodeModal");
+  const barcodeSvg = document.getElementById("barcodeSvg");
+  const barcodeNumberText = document.getElementById("barcodeNumberText");
 
   // Forms & Inputs
   const loginForm = document.getElementById("loginForm");
@@ -313,7 +400,40 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /* ------------------------------------------------------------------------
-     C. PROFILE BACK BUTTON NAVIGATION
+     C. 3D FLIP CENTRAL ID & BARCODE MODAL HANDLERS
+     ------------------------------------------------------------------------ */
+  if (idFlipWrapper) {
+    idFlipWrapper.addEventListener("click", (e) => {
+      e.stopPropagation();
+
+      if (!idFlipWrapper.classList.contains("flipped")) {
+        // Flip on first click
+        idFlipWrapper.classList.add("flipped");
+      } else {
+        // Open barcode modal on second click
+        if (currentUniqueId && barcodeSvg && barcodeNumberText && barcodeModal) {
+          drawBarcode(barcodeSvg, currentUniqueId);
+          barcodeNumberText.textContent = currentUniqueId;
+          barcodeModal.classList.remove("hidden");
+        }
+      }
+    });
+  }
+
+  if (closeBarcodeModal && barcodeModal) {
+    closeBarcodeModal.addEventListener("click", () => {
+      barcodeModal.classList.add("hidden");
+    });
+  }
+
+  if (barcodeModal) {
+    barcodeModal.addEventListener("click", (e) => {
+      if (e.target === barcodeModal) barcodeModal.classList.add("hidden");
+    });
+  }
+
+  /* ------------------------------------------------------------------------
+     D. PROFILE BACK BUTTON NAVIGATION
      ------------------------------------------------------------------------ */
   if (profileBackBtn) {
     profileBackBtn.addEventListener("click", (e) => {
@@ -329,7 +449,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /* ------------------------------------------------------------------------
-     D. FORGOT PASSWORD MODAL & RESET HANDLERS
+     E. FORGOT PASSWORD MODAL & RESET HANDLERS
      ------------------------------------------------------------------------ */
   if (forgotPasswordLink && forgotModal) {
     forgotPasswordLink.addEventListener("click", (e) => {
@@ -397,7 +517,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /* ------------------------------------------------------------------------
-     E. PHONE SMS OTP AUTHENTICATION (FIREBASE RECAPTCHA)
+     F. PHONE SMS OTP AUTHENTICATION (FIREBASE RECAPTCHA)
      ------------------------------------------------------------------------ */
   window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
     'size': 'invisible',
@@ -489,7 +609,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /* ------------------------------------------------------------------------
-     F. FACEBOOK SOCIAL LOGIN
+     G. FACEBOOK SOCIAL LOGIN
      ------------------------------------------------------------------------ */
   async function handleFacebookAuth() {
     const provider = new firebase.auth.FacebookAuthProvider();
@@ -524,7 +644,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (facebookSignupBtn) facebookSignupBtn.addEventListener("click", handleFacebookAuth);
 
   /* ------------------------------------------------------------------------
-     G. WALLET & KYC HANDLERS
+     H. WALLET & KYC ACTIVATION
      ------------------------------------------------------------------------ */
   if (openKycModalBtn) {
     openKycModalBtn.addEventListener("click", () => {
@@ -538,7 +658,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Toggle Aadhaar vs PAN KYC View
   if (aadhaarKycTab && panKycTab) {
     aadhaarKycTab.addEventListener("click", () => {
       aadhaarKycTab.classList.add("active");
@@ -555,7 +674,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Submit Aadhaar KYC Form
+  // Aadhaar Form Submit
   if (aadhaarKycForm) {
     aadhaarKycForm.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -575,7 +694,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       const kycData = {
         type: "aadhaar",
-        aadhaarNumber: num.slice(-4) ? `•••• •••• ${num.slice(-4)}` : num,
+        maskedNumber: num.slice(-4) ? `•••• •••• ${num.slice(-4)}` : num,
         name,
         fatherName,
         dob,
@@ -588,7 +707,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Submit PAN KYC Form
+  // PAN Form Submit
   if (panKycForm) {
     panKycForm.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -617,7 +736,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Save KYC to Firestore & Activate Wallet
   async function saveKycAndActivateWallet(uid, kycData) {
     try {
       const userRef = db.collection("users").doc(uid);
@@ -634,9 +752,8 @@ document.addEventListener("DOMContentLoaded", () => {
       kycModal.classList.add("hidden");
       renderWalletState(currentUserData);
 
-      showToast("Wallet Activated!", "₹20 Signup Bonus credited to your wallet balance.", "success");
+      showToast("Wallet Activated!", "₹20 Signup Bonus credited to your balance.", "success");
 
-      // Automatically switch to Wallet tab panel
       if (walletMenuItem) {
         walletMenuItem.click();
       }
@@ -645,7 +762,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  // Render Wallet UI State
   function renderWalletState(data) {
     if (!data) return;
 
@@ -654,13 +770,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const kyc = data.kycData || null;
 
     if (isActivated) {
-      // Reveal Wallet item in Sidebar Menu
       if (walletMenuItem) walletMenuItem.classList.remove("hidden");
-
-      // Update Balance
       if (walletBalanceDisplay) walletBalanceDisplay.textContent = `₹${balance.toFixed(2)}`;
 
-      // Update Banner in Payment Tab
       if (paymentWalletBanner && walletBannerText && openKycModalBtn) {
         paymentWalletBanner.style.background = "#dcfce7";
         paymentWalletBanner.style.borderColor = "#86efac";
@@ -669,21 +781,19 @@ document.addEventListener("DOMContentLoaded", () => {
         openKycModalBtn.style.display = "none";
       }
 
-      // Render Date in Signup Bonus Table
       if (bonusDateCell) {
         bonusDateCell.textContent = kyc ? kyc.submittedAt : "Today";
       }
 
-      // Render Verified KYC Box (Non-Editable Format)
       if (verifiedKycDisplayBox && kyc) {
         if (kyc.type === "aadhaar") {
           verifiedKycDisplayBox.innerHTML = `
-            <div class="kyc-field-row"><span>Document Type:</span><strong>Aadhaar Card (UID)</strong></div>
-            <div class="kyc-field-row"><span>Aadhaar Number:</span><strong>${kyc.aadhaarNumber}</strong></div>
+            <div class="kyc-field-row"><span>Document Type:</span><strong>Aadhaar Card</strong></div>
+            <div class="kyc-field-row"><span>UID Number:</span><strong>${kyc.maskedNumber}</strong></div>
             <div class="kyc-field-row"><span>Full Name:</span><strong>${kyc.name}</strong></div>
             <div class="kyc-field-row"><span>Father's Name:</span><strong>${kyc.fatherName}</strong></div>
             <div class="kyc-field-row"><span>Date of Birth:</span><strong>${kyc.dob}</strong></div>
-            <div class="kyc-field-row"><span>Full Address:</span><strong>${kyc.address}</strong></div>
+            <div class="kyc-field-row"><span>Address:</span><strong>${kyc.address}</strong></div>
             <div class="kyc-field-row"><span>Status:</span><strong style="color:#16a34a;">Verified ✅</strong></div>
           `;
         } else {
@@ -702,12 +812,12 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /* ------------------------------------------------------------------------
-     H. TOP-UP QR SCANNER MODAL & 5-MINUTE COUNTDOWN TIMER
+     I. TOP-UP QR SCANNER & 5-MINUTE COUNTDOWN TIMER
      ------------------------------------------------------------------------ */
   if (openTopupQrBtn && topupQrModal) {
     openTopupQrBtn.addEventListener("click", () => {
       topupQrModal.classList.remove("hidden");
-      startQrCountdown(300); // 5 minutes = 300 seconds
+      startQrCountdown(300); // 300 seconds = 5 minutes
     });
   }
 
@@ -745,14 +855,13 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /* ------------------------------------------------------------------------
-     I. PAYMENT MODALS & CARD/UPI SAVING (FIRESTORE)
+     J. PAYMENT METHODS (CARDS & UPI)
      ------------------------------------------------------------------------ */
   if (openCardModalBtn) openCardModalBtn.addEventListener("click", () => cardModal.classList.remove("hidden"));
   if (openUpiModalBtn) openUpiModalBtn.addEventListener("click", () => upiModal.classList.remove("hidden"));
   if (closeCardModal) closeCardModal.addEventListener("click", () => cardModal.classList.add("hidden"));
   if (closeUpiModal) closeUpiModal.addEventListener("click", () => upiModal.classList.add("hidden"));
 
-  // Auto detect card brand on typing card number
   if (cardNumberInput && cardBrandBadge) {
     cardNumberInput.addEventListener("input", (e) => {
       let val = e.target.value.replace(/\D/g, '');
@@ -764,7 +873,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Save Debit/Credit Card
+  // Save Card
   if (addCardForm) {
     addCardForm.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -854,7 +963,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Render Saved Payment Methods
   function renderPaymentMethods(methods) {
     if (!savedPaymentMethodsGrid) return;
 
@@ -894,7 +1002,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }).join('');
   }
 
-  // Delete Saved Payment Method
   window.deletePaymentMethod = async function(id) {
     const user = auth.currentUser;
     if (!user || !confirm("Are you sure you want to remove this saved payment method?")) return;
@@ -914,7 +1021,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
-  // Render Transaction History
   function renderTransactionHistory(transactions) {
     if (!transactionHistoryContainer) return;
 
@@ -952,7 +1058,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /* ------------------------------------------------------------------------
-     J. FIREBASE AUTH STATE OBSERVER
+     K. FIREBASE AUTH STATE OBSERVER
      ------------------------------------------------------------------------ */
   auth.onAuthStateChanged(async (user) => {
     if (user) {
@@ -964,6 +1070,12 @@ document.addEventListener("DOMContentLoaded", () => {
           currentUserData = doc.data();
         } else {
           currentUserData = await handleNewSocialUserProfile(user);
+        }
+
+        // Generate / Retrieve 7-digit ID
+        currentUniqueId = await getOrCreateUserSevenDigitId(user);
+        if (uniqueIdDisplay) {
+          uniqueIdDisplay.textContent = currentUniqueId;
         }
 
         const isRedirected = onLoginSuccess(user, currentUserData);
@@ -981,13 +1093,15 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     } else {
       currentUserData = null;
+      currentUniqueId = "";
+      if (idFlipWrapper) idFlipWrapper.classList.remove("flipped");
       localStorage.removeItem('lurova_account_user');
       switchToAuthView();
     }
   });
 
   /* ------------------------------------------------------------------------
-     K. ACCURATE DEVICE & OS PARSING
+     L. ACCURATE DEVICE & OS PARSING
      ------------------------------------------------------------------------ */
   function parseAccurateUserAgent() {
     const ua = navigator.userAgent;
@@ -1040,7 +1154,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /* ------------------------------------------------------------------------
-     L. GOOGLE & APPLE AUTH
+     M. GOOGLE & APPLE AUTH
      ------------------------------------------------------------------------ */
   async function handleNewSocialUserProfile(user) {
     const nameParts = (user.displayName || "").split(" ");
@@ -1102,7 +1216,7 @@ document.addEventListener("DOMContentLoaded", () => {
   if (appleSignupBtn) appleSignupBtn.addEventListener("click", handleAppleAuth);
 
   /* ------------------------------------------------------------------------
-     M. LIVE PASSWORD VALIDATION & FORM SUBMISSIONS
+     N. LIVE PASSWORD MATCH VALIDATION & FORM SUBMISSIONS
      ------------------------------------------------------------------------ */
   function validatePasswords() {
     if (!signupPassword || !confirmPassword || !passwordMatchError) return true;
@@ -1254,7 +1368,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /* ------------------------------------------------------------------------
-     N. POPULATE & RENDER PROFILE FIELDS
+     O. POPULATE & RENDER PROFILE FIELDS
      ------------------------------------------------------------------------ */
   function populateProfileFields(data) {
     if (!data) return;
@@ -1299,7 +1413,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /* ------------------------------------------------------------------------
-     O. EDIT, SAVE, & CANCEL PROFILE DETAILS
+     P. EDIT, SAVE, & CANCEL PROFILE DETAILS
      ------------------------------------------------------------------------ */
   if (editToggleBtn) {
     editToggleBtn.addEventListener("click", () => {
@@ -1377,7 +1491,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   /* ------------------------------------------------------------------------
-     P. LOGOUT & DELETE ACCOUNT
+     Q. LOGOUT & DELETE ACCOUNT
      ------------------------------------------------------------------------ */
   if (logoutBtn) {
     logoutBtn.addEventListener("click", async () => {
