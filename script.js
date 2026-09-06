@@ -10,28 +10,18 @@ const firebaseConfig = {
   appId: "1:925302881748:web:da8f9f6b298e27b758ea41"
 };
 
-// Initialize Firebase App, Auth, and Firestore
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.firestore();
 
-// Set Auth Persistence to LOCAL
 auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
 
-// Global State
 let phoneConfirmationResult = null;
 let qrTimerInterval = null;
 let currentUniqueId = "";
 
-// Initialize EmailJS Browser SDK (Optional)
-(function() {
-    if (window.emailjs) {
-        emailjs.init("YOUR_EMAILJS_PUBLIC_KEY");
-    }
-})();
-
 // ==========================================================================
-// 2. POPUP TOAST NOTIFICATION HELPER FUNCTION
+// 2. POPUP TOAST NOTIFICATION HELPER
 // ==========================================================================
 function showToast(title, message, type = "success") {
   const toast = document.getElementById("toastNotification");
@@ -39,10 +29,7 @@ function showToast(title, message, type = "success") {
   const toastMessage = document.getElementById("toastMessage");
   const toastIcon = document.getElementById("toastIcon");
 
-  if (!toast || !toastTitle || !toastMessage) {
-    console.log(`[${type.toUpperCase()}] ${title}: ${message}`);
-    return;
-  }
+  if (!toast || !toastTitle || !toastMessage) return;
 
   toastTitle.textContent = title;
   toastMessage.textContent = message;
@@ -59,7 +46,6 @@ function showToast(title, message, type = "success") {
   }
 
   toast.classList.remove("hidden");
-
   clearTimeout(window.toastTimer);
   window.toastTimer = setTimeout(() => {
     toast.classList.add("hidden");
@@ -67,79 +53,7 @@ function showToast(title, message, type = "success") {
 }
 
 // ==========================================================================
-// 3. CROSS-SUBDOMAIN POSTMESSAGE LISTENER (ads.lurova.life Auto-Login)
-// ==========================================================================
-window.addEventListener('message', (event) => {
-  if (event.origin.includes('lurova.life') || event.origin.includes('localhost')) {
-    if (event.data === 'CHECK_LUROVA_SESSION') {
-      const savedUser = localStorage.getItem('lurova_account_user');
-      if (savedUser) {
-        event.source.postMessage({
-          type: 'LUROVA_SESSION_RESPONSE',
-          user: JSON.parse(savedUser)
-        }, event.origin);
-      } else {
-        event.source.postMessage({
-          type: 'LUROVA_SESSION_RESPONSE',
-          user: null
-        }, event.origin);
-      }
-    }
-  }
-});
-
-// ==========================================================================
-// 4. REDIRECT & SHARED COOKIE / LOCALSTORAGE FUNCTION
-// ==========================================================================
-function onLoginSuccess(user, userData) {
-  const email = user.email || '';
-  
-  let name = "";
-  if (userData && userData.firstName) {
-    name = `${userData.firstName} ${userData.lastName || ''}`.trim();
-  } else {
-    name = user.displayName || (email ? email.split('@')[0] : 'User');
-  }
-  
-  const uid = user.uid || '';
-  const phone = (userData && userData.phone) || user.phoneNumber || '';
-
-  const userPayload = { uid, email, displayName: name, phone };
-
-  localStorage.setItem('lurova_account_user', JSON.stringify(userPayload));
-
-  const cookiePayload = JSON.stringify({ email, name, uid, phone });
-  document.cookie = `lurova_user=${encodeURIComponent(cookiePayload)}; domain=.lurova.life; path=/; max-age=2592000; SameSite=Lax; Secure`;
-
-  const urlParams = new URLSearchParams(window.location.search);
-  const redirectToParam = urlParams.get('redirect_to');
-  const redirectUrl = urlParams.get('redirect_url') || urlParams.get('redirect') || redirectToParam;
-
-  if (redirectUrl) {
-    try {
-      const encodedUser = encodeURIComponent(JSON.stringify(userPayload));
-      const finalUrl = new URL(redirectUrl);
-      finalUrl.searchParams.set('user', encodedUser);
-      finalUrl.searchParams.set('email', email);
-      finalUrl.searchParams.set('name', name);
-      finalUrl.searchParams.set('uid', uid);
-      finalUrl.searchParams.set('safari_auth', 'true');
-      
-      window.location.replace(finalUrl.toString());
-      return true;
-    } catch (e) {
-      console.error("Invalid Redirect URL:", e);
-      const encodedUser = encodeURIComponent(JSON.stringify(userPayload));
-      window.location.href = `${redirectUrl}${redirectUrl.includes('?') ? '&' : '?'}user=${encodedUser}`;
-      return true;
-    }
-  }
-
-  return false;
-}
-
-// ==========================================================================
-// 5. 7-DIGIT UNIQUE ID GENERATOR & SVG BARCODE RENDERER
+// 3. 7-DIGIT UNIQUE ID & SVG BARCODE GENERATOR
 // ==========================================================================
 async function getOrCreateUserSevenDigitId(user) {
   if (!user) return "1000001";
@@ -149,14 +63,13 @@ async function getOrCreateUserSevenDigitId(user) {
     const doc = await userDocRef.get();
 
     if (doc.exists && doc.data().uniqueIdNumber) {
-      return doc.data().uniqueIdNumber;
+      return doc.data().uniqueIdNumber.toString();
     }
 
     const randomSevenDigit = Math.floor(1000000 + Math.random() * 9000000).toString();
     await userDocRef.set({ uniqueIdNumber: randomSevenDigit }, { merge: true });
     return randomSevenDigit;
   } catch (err) {
-    console.error("Error creating 7-digit ID:", err);
     let hash = 0;
     for (let i = 0; i < user.uid.length; i++) {
       hash = (hash << 5) - hash + user.uid.charCodeAt(i);
@@ -167,24 +80,30 @@ async function getOrCreateUserSevenDigitId(user) {
 }
 
 function drawBarcode(svgElement, codeString) {
+  if (!svgElement) return;
   svgElement.innerHTML = '';
+  
   const barPattern = [
     [2,1,1,2,3,2], [2,2,2,1,1,3], [1,3,1,2,2,2], [3,1,1,2,2,2],
     [2,3,1,1,2,2], [2,2,1,1,1,4], [2,1,4,1,1,2], [2,2,3,2,1,1],
     [4,1,1,1,2,2], [2,1,3,1,2,2]
   ];
 
-  let x = 12;
-  const height = 70;
+  let x = 14;
+  const height = 75;
 
-  const guard = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-  guard.setAttribute("x", x);
-  guard.setAttribute("y", "0");
-  guard.setAttribute("width", "3");
-  guard.setAttribute("height", height);
-  guard.setAttribute("fill", "#0f172a");
-  svgElement.appendChild(guard);
-  x += 6;
+  const createBar = (posX, w) => {
+    const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+    rect.setAttribute("x", posX.toString());
+    rect.setAttribute("y", "0");
+    rect.setAttribute("width", w.toString());
+    rect.setAttribute("height", height.toString());
+    rect.setAttribute("fill", "#0f172a");
+    return rect;
+  };
+
+  svgElement.appendChild(createBar(x, 3));
+  x += 7;
 
   for (let i = 0; i < codeString.length; i++) {
     const digit = parseInt(codeString[i], 10) || 0;
@@ -193,32 +112,69 @@ function drawBarcode(svgElement, codeString) {
     for (let j = 0; j < pattern.length; j++) {
       const width = pattern[j] * 1.5;
       if (j % 2 === 0) {
-        const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-        rect.setAttribute("x", x);
-        rect.setAttribute("y", "0");
-        rect.setAttribute("width", width.toString());
-        rect.setAttribute("height", height.toString());
-        rect.setAttribute("fill", "#0f172a");
-        svgElement.appendChild(rect);
+        svgElement.appendChild(createBar(x, width));
       }
       x += width;
     }
-    x += 2;
+    x += 3;
   }
 
-  const endGuard = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-  endGuard.setAttribute("x", x);
-  endGuard.setAttribute("y", "0");
-  endGuard.setAttribute("width", "3");
-  endGuard.setAttribute("height", height);
-  endGuard.setAttribute("fill", "#0f172a");
-  svgElement.appendChild(endGuard);
-  x += 12;
+  svgElement.appendChild(createBar(x, 3));
+  x += 14;
 
   svgElement.setAttribute("viewBox", `0 0 ${x} ${height}`);
 }
 
-// Card Brand Helper
+// ==========================================================================
+// 4. CROSS-SUBDOMAIN & REDIRECT MANAGEMENT
+// ==========================================================================
+window.addEventListener('message', (event) => {
+  if (event.origin.includes('lurova.life') || event.origin.includes('localhost')) {
+    if (event.data === 'CHECK_LUROVA_SESSION') {
+      const savedUser = localStorage.getItem('lurova_account_user');
+      event.source.postMessage({
+        type: 'LUROVA_SESSION_RESPONSE',
+        user: savedUser ? JSON.parse(savedUser) : null
+      }, event.origin);
+    }
+  }
+});
+
+function onLoginSuccess(user, userData) {
+  const email = user.email || '';
+  let name = (userData && userData.firstName) 
+    ? `${userData.firstName} ${userData.lastName || ''}`.trim() 
+    : (user.displayName || (email ? email.split('@')[0] : 'User'));
+  
+  const uid = user.uid || '';
+  const phone = (userData && userData.phone) || user.phoneNumber || '';
+
+  const userPayload = { uid, email, displayName: name, phone };
+  localStorage.setItem('lurova_account_user', JSON.stringify(userPayload));
+
+  document.cookie = `lurova_user=${encodeURIComponent(JSON.stringify(userPayload))}; domain=.lurova.life; path=/; max-age=2592000; SameSite=Lax; Secure`;
+
+  const urlParams = new URLSearchParams(window.location.search);
+  const redirectUrl = urlParams.get('redirect_to') || urlParams.get('redirect_url') || urlParams.get('redirect');
+
+  if (redirectUrl) {
+    try {
+      const finalUrl = new URL(redirectUrl);
+      finalUrl.searchParams.set('user', encodeURIComponent(JSON.stringify(userPayload)));
+      finalUrl.searchParams.set('email', email);
+      finalUrl.searchParams.set('name', name);
+      finalUrl.searchParams.set('uid', uid);
+      finalUrl.searchParams.set('safari_auth', 'true');
+      window.location.replace(finalUrl.toString());
+      return true;
+    } catch (e) {
+      window.location.href = `${redirectUrl}${redirectUrl.includes('?') ? '&' : '?'}user=${encodeURIComponent(JSON.stringify(userPayload))}`;
+      return true;
+    }
+  }
+  return false;
+}
+
 function detectCardBrand(number) {
   const cleanNumber = number.replace(/\D/g, '');
   if (/^4/.test(cleanNumber)) return "Visa";
@@ -230,23 +186,18 @@ function detectCardBrand(number) {
 }
 
 // ==========================================================================
-// 6. MAIN APPLICATION LOGIC
+// 5. DOM INITIALIZATION
 // ==========================================================================
 document.addEventListener("DOMContentLoaded", () => {
-  // Canvas Containers
   const bgArt = document.getElementById("bgArt");
   const authCard = document.getElementById("authCard");
   const profileCard = document.getElementById("profileCard");
 
-  // Auth Toggle Buttons
   const switchToSignupBtn = document.getElementById("switchToSignupBtn");
   const switchToLoginBtn = document.getElementById("switchToLoginBtn");
-
-  // Form Submit Buttons
   const loginSubmitBtn = document.getElementById("loginSubmitBtn");
   const signupSubmitBtn = document.getElementById("signupSubmitBtn");
 
-  // Social Auth Buttons
   const googleLoginBtn = document.getElementById("googleLoginBtn");
   const googleSignupBtn = document.getElementById("googleSignupBtn");
   const appleLoginBtn = document.getElementById("appleLoginBtn");
@@ -254,7 +205,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const facebookLoginBtn = document.getElementById("facebookLoginBtn");
   const facebookSignupBtn = document.getElementById("facebookSignupBtn");
 
-  // Toast Close Handler
   const toastCloseBtn = document.getElementById("toastCloseBtn");
   if (toastCloseBtn) {
     toastCloseBtn.addEventListener("click", () => {
@@ -262,35 +212,13 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Phone Auth Elements
-  const loginWithPhoneOtpBtn = document.getElementById("loginWithPhoneOtpBtn");
-  const phoneOtpModal = document.getElementById("phoneOtpModal");
-  const closePhoneOtpModal = document.getElementById("closePhoneOtpModal");
-  const sendOtpBtn = document.getElementById("sendOtpBtn");
-  const verifyOtpBtn = document.getElementById("verifyOtpBtn");
-  const phoneInputStep = document.getElementById("phoneInputStep");
-  const otpInputStep = document.getElementById("otpInputStep");
-
-  // Forgot Password Elements
-  const forgotPasswordLink = document.getElementById("forgotPasswordLink");
-  const forgotModal = document.getElementById("forgotModal");
-  const closeForgotModal = document.getElementById("closeForgotModal");
-  const forgotPasswordForm = document.getElementById("forgotPasswordForm");
-  const resetSubmitBtn = document.getElementById("resetSubmitBtn");
-
-  // Payment Modals & Forms
-  const cardModal = document.getElementById("cardModal");
-  const upiModal = document.getElementById("upiModal");
-  const openCardModalBtn = document.getElementById("openCardModalBtn");
-  const openUpiModalBtn = document.getElementById("openUpiModalBtn");
-  const closeCardModal = document.getElementById("closeCardModal");
-  const closeUpiModal = document.getElementById("closeUpiModal");
-  const addCardForm = document.getElementById("addCardForm");
-  const addUpiForm = document.getElementById("addUpiForm");
-  const cardNumberInput = document.getElementById("cardNumber");
-  const cardBrandBadge = document.getElementById("cardBrandBadge");
-  const savedPaymentMethodsGrid = document.getElementById("savedPaymentMethodsGrid");
-  const transactionHistoryContainer = document.getElementById("transactionHistoryContainer");
+  // 3D Flip & Barcode Elements
+  const idFlipWrapper = document.getElementById("idFlipWrapper");
+  const uniqueIdDisplay = document.getElementById("uniqueIdDisplay");
+  const barcodeModal = document.getElementById("barcodeModal");
+  const closeBarcodeModal = document.getElementById("closeBarcodeModal");
+  const barcodeSvg = document.getElementById("barcodeSvg");
+  const barcodeNumberText = document.getElementById("barcodeNumberText");
 
   // Wallet & KYC Elements
   const kycModal = document.getElementById("kycModal");
@@ -307,31 +235,21 @@ document.addEventListener("DOMContentLoaded", () => {
   const walletBannerText = document.getElementById("walletBannerText");
   const bonusDateCell = document.getElementById("bonusDateCell");
 
-  // Top-Up QR Modal Elements
+  // Top-Up QR Elements
   const topupQrModal = document.getElementById("topupQrModal");
   const openTopupQrBtn = document.getElementById("openTopupQrBtn");
   const closeTopupQrModal = document.getElementById("closeTopupQrModal");
   const qrCountdownTimer = document.getElementById("qrCountdownTimer");
 
-  // 3D Flip ID & Barcode Modal Elements
-  const idFlipWrapper = document.getElementById("idFlipWrapper");
-  const uniqueIdDisplay = document.getElementById("uniqueIdDisplay");
-  const barcodeModal = document.getElementById("barcodeModal");
-  const closeBarcodeModal = document.getElementById("closeBarcodeModal");
-  const barcodeSvg = document.getElementById("barcodeSvg");
-  const barcodeNumberText = document.getElementById("barcodeNumberText");
-
-  // Forms & Inputs
+  // Forms
   const loginForm = document.getElementById("loginForm");
   const signupForm = document.getElementById("signupForm");
   const profileDetailsForm = document.getElementById("profileDetailsForm");
-
-  // Password Inputs
   const signupPassword = document.getElementById("signupPassword");
   const confirmPassword = document.getElementById("confirmPassword");
   const passwordMatchError = document.getElementById("passwordMatchError");
 
-  // Profile Elements
+  // Profile Fields
   const profileBackBtn = document.getElementById("profileBackBtn");
   const userAvatar = document.getElementById("userAvatar");
   const profileFullName = document.getElementById("profileFullName");
@@ -344,11 +262,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const profileGender = document.getElementById("profileGender");
   const resetEmailDisplay = document.getElementById("resetEmailDisplay");
 
-  // Dashboard Sidebar & Tabs
   const sidebarMenuItems = document.querySelectorAll(".menu-item");
   const tabPanels = document.querySelectorAll(".tab-panel");
 
-  // Profile Actions
   const editToggleBtn = document.getElementById("editToggleBtn");
   const editActions = document.getElementById("editActions");
   const cancelEditBtn = document.getElementById("cancelEditBtn");
@@ -356,61 +272,19 @@ document.addEventListener("DOMContentLoaded", () => {
   const deleteAccountBtn = document.getElementById("deleteAccountBtn");
   const directResetEmailBtn = document.getElementById("directResetEmailBtn");
   const devicesListContainer = document.getElementById("devicesListContainer");
-  const downloadDataBtn = document.getElementById("downloadDataBtn");
+  const savedPaymentMethodsGrid = document.getElementById("savedPaymentMethodsGrid");
+  const transactionHistoryContainer = document.getElementById("transactionHistoryContainer");
 
   let currentUserData = null;
 
-  /* ------------------------------------------------------------------------
-     A. SIDEBAR TAB SWITCHING
-     ------------------------------------------------------------------------ */
-  sidebarMenuItems.forEach(item => {
-    item.addEventListener("click", () => {
-      const targetTab = item.getAttribute("data-tab");
-
-      sidebarMenuItems.forEach(btn => btn.classList.remove("active"));
-      item.classList.add("active");
-
-      tabPanels.forEach(panel => {
-        if (panel.id === targetTab) {
-          panel.classList.add("active");
-        } else {
-          panel.classList.remove("active");
-        }
-      });
-    });
-  });
-
-  /* ------------------------------------------------------------------------
-     B. LOGIN / SIGNUP VIEW SWITCHING
-     ------------------------------------------------------------------------ */
-  if (switchToSignupBtn) {
-    switchToSignupBtn.addEventListener("click", (e) => {
-      e.preventDefault();
-      if (authCard) authCard.classList.add("signup-mode");
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    });
-  }
-
-  if (switchToLoginBtn) {
-    switchToLoginBtn.addEventListener("click", (e) => {
-      e.preventDefault();
-      if (authCard) authCard.classList.remove("signup-mode");
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    });
-  }
-
-  /* ------------------------------------------------------------------------
-     C. 3D FLIP CENTRAL ID & BARCODE MODAL HANDLERS
-     ------------------------------------------------------------------------ */
+  /* --- 3D FLIP & BARCODE INTERACTION --- */
   if (idFlipWrapper) {
     idFlipWrapper.addEventListener("click", (e) => {
       e.stopPropagation();
 
       if (!idFlipWrapper.classList.contains("flipped")) {
-        // Flip on first click
         idFlipWrapper.classList.add("flipped");
       } else {
-        // Open barcode modal on second click
         if (currentUniqueId && barcodeSvg && barcodeNumberText && barcodeModal) {
           drawBarcode(barcodeSvg, currentUniqueId);
           barcodeNumberText.textContent = currentUniqueId;
@@ -432,9 +306,40 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  /* ------------------------------------------------------------------------
-     D. PROFILE BACK BUTTON NAVIGATION
-     ------------------------------------------------------------------------ */
+  /* --- TAB SWITCHING --- */
+  sidebarMenuItems.forEach(item => {
+    item.addEventListener("click", () => {
+      const targetTab = item.getAttribute("data-tab");
+      sidebarMenuItems.forEach(btn => btn.classList.remove("active"));
+      item.classList.add("active");
+
+      tabPanels.forEach(panel => {
+        if (panel.id === targetTab) {
+          panel.classList.add("active");
+        } else {
+          panel.classList.remove("active");
+        }
+      });
+    });
+  });
+
+  /* --- FORM SLIDING --- */
+  if (switchToSignupBtn) {
+    switchToSignupBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      if (authCard) authCard.classList.add("signup-mode");
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  }
+
+  if (switchToLoginBtn) {
+    switchToLoginBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      if (authCard) authCard.classList.remove("signup-mode");
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+  }
+
   if (profileBackBtn) {
     profileBackBtn.addEventListener("click", (e) => {
       e.preventDefault();
@@ -448,9 +353,12 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  /* ------------------------------------------------------------------------
-     E. FORGOT PASSWORD MODAL & RESET HANDLERS
-     ------------------------------------------------------------------------ */
+  /* --- PASSWORD RESET MODAL --- */
+  const forgotPasswordLink = document.getElementById("forgotPasswordLink");
+  const forgotModal = document.getElementById("forgotModal");
+  const closeForgotModal = document.getElementById("closeForgotModal");
+  const forgotPasswordForm = document.getElementById("forgotPasswordForm");
+
   if (forgotPasswordLink && forgotModal) {
     forgotPasswordLink.addEventListener("click", (e) => {
       e.preventDefault();
@@ -464,40 +372,19 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  if (forgotModal) {
-    forgotModal.addEventListener("click", (e) => {
-      if (e.target === forgotModal) forgotModal.classList.add("hidden");
-    });
-  }
-
   if (forgotPasswordForm) {
     forgotPasswordForm.addEventListener("submit", async (e) => {
       e.preventDefault();
-      const resetEmailInput = document.getElementById("resetEmail");
-      const resetEmail = resetEmailInput ? resetEmailInput.value.trim().toLowerCase() : "";
-
-      if (!resetEmail) {
-        showToast("Error", "Please enter your registered email address.", "error");
-        return;
-      }
-
-      if (resetSubmitBtn) {
-        resetSubmitBtn.disabled = true;
-        resetSubmitBtn.querySelector("span").textContent = "Sending...";
-      }
+      const resetEmail = document.getElementById("resetEmail").value.trim().toLowerCase();
+      if (!resetEmail) return showToast("Error", "Please enter your email.", "error");
 
       try {
         await auth.sendPasswordResetEmail(resetEmail);
-        showToast("Email Sent", "Password reset email sent! Check your inbox.", "success");
+        showToast("Email Sent", "Password reset email sent!", "success");
         forgotModal.classList.add("hidden");
         forgotPasswordForm.reset();
       } catch (error) {
         showToast("Reset Error", error.message, "error");
-      } finally {
-        if (resetSubmitBtn) {
-          resetSubmitBtn.disabled = false;
-          resetSubmitBtn.querySelector("span").textContent = "Send Reset Link";
-        }
       }
     });
   }
@@ -508,7 +395,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (user && user.email) {
         try {
           await auth.sendPasswordResetEmail(user.email);
-          showToast("Email Sent", `Password reset link sent to ${user.email}`, "success");
+          showToast("Email Sent", `Reset link sent to ${user.email}`, "success");
         } catch (error) {
           showToast("Error", error.message, "error");
         }
@@ -516,13 +403,16 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  /* ------------------------------------------------------------------------
-     F. PHONE SMS OTP AUTHENTICATION (FIREBASE RECAPTCHA)
-     ------------------------------------------------------------------------ */
-  window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', {
-    'size': 'invisible',
-    'callback': (response) => {}
-  });
+  /* --- PHONE OTP --- */
+  window.recaptchaVerifier = new firebase.auth.RecaptchaVerifier('recaptcha-container', { 'size': 'invisible' });
+
+  const phoneOtpModal = document.getElementById("phoneOtpModal");
+  const loginWithPhoneOtpBtn = document.getElementById("loginWithPhoneOtpBtn");
+  const closePhoneOtpModal = document.getElementById("closePhoneOtpModal");
+  const sendOtpBtn = document.getElementById("sendOtpBtn");
+  const verifyOtpBtn = document.getElementById("verifyOtpBtn");
+  const phoneInputStep = document.getElementById("phoneInputStep");
+  const otpInputStep = document.getElementById("otpInputStep");
 
   if (loginWithPhoneOtpBtn && phoneOtpModal) {
     loginWithPhoneOtpBtn.addEventListener("click", () => {
@@ -533,36 +423,24 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   if (closePhoneOtpModal && phoneOtpModal) {
-    closePhoneOtpModal.addEventListener("click", () => {
-      phoneOtpModal.classList.add("hidden");
-    });
+    closePhoneOtpModal.addEventListener("click", () => phoneOtpModal.classList.add("hidden"));
   }
 
   if (sendOtpBtn) {
     sendOtpBtn.addEventListener("click", async () => {
       const phoneNumber = document.getElementById("phoneAuthNumber").value.trim();
-
-      if (!phoneNumber || phoneNumber.length < 10) {
-        showToast("Invalid Input", "Please enter a valid phone number with country code.", "error");
-        return;
-      }
+      if (!phoneNumber || phoneNumber.length < 10) return showToast("Invalid Input", "Enter valid phone with country code.", "error");
 
       sendOtpBtn.disabled = true;
-      sendOtpBtn.querySelector("span").textContent = "Sending SMS...";
-
       try {
-        const appVerifier = window.recaptchaVerifier;
-        phoneConfirmationResult = await auth.signInWithPhoneNumber(phoneNumber, appVerifier);
-        
+        phoneConfirmationResult = await auth.signInWithPhoneNumber(phoneNumber, window.recaptchaVerifier);
         phoneInputStep.classList.add("hidden");
         otpInputStep.classList.remove("hidden");
         showToast("OTP Sent", `Verification code sent to ${phoneNumber}`, "info");
       } catch (error) {
         showToast("SMS Error", error.message, "error");
-        window.recaptchaVerifier.render().then(widgetId => grecaptcha.reset(widgetId));
       } finally {
         sendOtpBtn.disabled = false;
-        sendOtpBtn.querySelector("span").textContent = "Send SMS OTP";
       }
     });
   }
@@ -570,32 +448,16 @@ document.addEventListener("DOMContentLoaded", () => {
   if (verifyOtpBtn) {
     verifyOtpBtn.addEventListener("click", async () => {
       const code = document.getElementById("otpCode").value.trim();
-
-      if (!code || code.length !== 6) {
-        showToast("Invalid OTP", "Please enter the 6-digit code received via SMS.", "error");
-        return;
-      }
+      if (!code || code.length !== 6) return showToast("Invalid OTP", "Enter 6-digit code.", "error");
 
       verifyOtpBtn.disabled = true;
-      verifyOtpBtn.querySelector("span").textContent = "Verifying...";
-
       try {
         const result = await phoneConfirmationResult.confirm(code);
-        const user = result.user;
-
         phoneOtpModal.classList.add("hidden");
-
-        const doc = await db.collection("users").doc(user.uid).get();
-        if (doc.exists) {
-          currentUserData = doc.data();
-        } else {
-          currentUserData = await handleNewSocialUserProfile(user);
-        }
-
+        const doc = await db.collection("users").doc(result.user.uid).get();
+        currentUserData = doc.exists ? doc.data() : await handleNewSocialUserProfile(result.user);
         showToast("Success", "Phone authentication successful!", "success");
-
-        const isRedirected = onLoginSuccess(user, currentUserData);
-        if (!isRedirected) {
+        if (!onLoginSuccess(result.user, currentUserData)) {
           populateProfileFields(currentUserData);
           switchToProfileView();
         }
@@ -603,60 +465,37 @@ document.addEventListener("DOMContentLoaded", () => {
         showToast("OTP Error", error.message, "error");
       } finally {
         verifyOtpBtn.disabled = false;
-        verifyOtpBtn.querySelector("span").textContent = "Verify & Sign In";
       }
     });
   }
 
-  /* ------------------------------------------------------------------------
-     G. FACEBOOK SOCIAL LOGIN
-     ------------------------------------------------------------------------ */
-  async function handleFacebookAuth() {
-    const provider = new firebase.auth.FacebookAuthProvider();
+  /* --- SOCIAL AUTHENTICATION --- */
+  async function handleSocial(provider, name) {
     try {
-      const result = await auth.signInWithPopup(provider);
-      const user = result.user;
-
-      const doc = await db.collection("users").doc(user.uid).get();
-      if (doc.exists) {
-        currentUserData = doc.data();
-      } else {
-        currentUserData = await handleNewSocialUserProfile(user);
-      }
-
-      showToast("Welcome", "Facebook login successful!", "success");
-
-      const isRedirected = onLoginSuccess(user, currentUserData);
-      if (!isRedirected) {
+      const res = await auth.signInWithPopup(provider);
+      const doc = await db.collection("users").doc(res.user.uid).get();
+      currentUserData = doc.exists ? doc.data() : await handleNewSocialUserProfile(res.user);
+      showToast("Welcome", `${name} sign-in successful!`, "success");
+      if (!onLoginSuccess(res.user, currentUserData)) {
         populateProfileFields(currentUserData);
         switchToProfileView();
       }
     } catch (error) {
-      if (error.code === 'auth/popup-blocked' || error.code === 'auth/popup-closed-by-user') {
-        auth.signInWithRedirect(provider);
-      } else {
-        showToast("Facebook Error", error.message, "error");
-      }
+      if (error.code === 'auth/popup-blocked') auth.signInWithRedirect(provider);
+      else showToast(`${name} Error`, error.message, "error");
     }
   }
 
-  if (facebookLoginBtn) facebookLoginBtn.addEventListener("click", handleFacebookAuth);
-  if (facebookSignupBtn) facebookSignupBtn.addEventListener("click", handleFacebookAuth);
+  if (googleLoginBtn) googleLoginBtn.addEventListener("click", () => handleSocial(new firebase.auth.GoogleAuthProvider(), "Google"));
+  if (googleSignupBtn) googleSignupBtn.addEventListener("click", () => handleSocial(new firebase.auth.GoogleAuthProvider(), "Google"));
+  if (appleLoginBtn) appleLoginBtn.addEventListener("click", () => handleSocial(new firebase.auth.OAuthProvider('apple.com'), "Apple"));
+  if (appleSignupBtn) appleSignupBtn.addEventListener("click", () => handleSocial(new firebase.auth.OAuthProvider('apple.com'), "Apple"));
+  if (facebookLoginBtn) facebookLoginBtn.addEventListener("click", () => handleSocial(new firebase.auth.FacebookAuthProvider(), "Facebook"));
+  if (facebookSignupBtn) facebookSignupBtn.addEventListener("click", () => handleSocial(new firebase.auth.FacebookAuthProvider(), "Facebook"));
 
-  /* ------------------------------------------------------------------------
-     H. WALLET & KYC ACTIVATION
-     ------------------------------------------------------------------------ */
-  if (openKycModalBtn) {
-    openKycModalBtn.addEventListener("click", () => {
-      kycModal.classList.remove("hidden");
-    });
-  }
-
-  if (closeKycModal) {
-    closeKycModal.addEventListener("click", () => {
-      kycModal.classList.add("hidden");
-    });
-  }
+  /* --- WALLET & KYC ACTIVATION --- */
+  if (openKycModalBtn) openKycModalBtn.addEventListener("click", () => kycModal.classList.remove("hidden"));
+  if (closeKycModal) closeKycModal.addEventListener("click", () => kycModal.classList.add("hidden"));
 
   if (aadhaarKycTab && panKycTab) {
     aadhaarKycTab.addEventListener("click", () => {
@@ -665,7 +504,6 @@ document.addEventListener("DOMContentLoaded", () => {
       aadhaarKycForm.classList.remove("hidden");
       panKycForm.classList.add("hidden");
     });
-
     panKycTab.addEventListener("click", () => {
       panKycTab.classList.add("active");
       aadhaarKycTab.classList.remove("active");
@@ -674,7 +512,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Aadhaar Form Submit
   if (aadhaarKycForm) {
     aadhaarKycForm.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -688,26 +525,19 @@ document.addEventListener("DOMContentLoaded", () => {
       const address = document.getElementById("aadhaarAddress").value.trim();
 
       if (!num || !name || !fatherName || !dob || !address) {
-        showToast("Missing Fields", "Please complete all Aadhaar KYC fields.", "error");
-        return;
+        return showToast("Missing Fields", "Please complete all Aadhaar fields.", "error");
       }
 
-      const kycData = {
+      await saveKycAndActivateWallet(user.uid, {
         type: "aadhaar",
-        maskedNumber: num.slice(-4) ? `•••• •••• ${num.slice(-4)}` : num,
-        name,
-        fatherName,
-        dob,
-        address,
+        maskedNumber: "[Aadhaar Verified]",
+        name, fatherName, dob, address,
         status: "verified",
         submittedAt: new Date().toLocaleDateString('en-IN')
-      };
-
-      await saveKycAndActivateWallet(user.uid, kycData);
+      });
     });
   }
 
-  // PAN Form Submit
   if (panKycForm) {
     panKycForm.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -718,28 +548,21 @@ document.addEventListener("DOMContentLoaded", () => {
       const name = document.getElementById("panName").value.trim();
       const dob = document.getElementById("panDob").value;
 
-      if (!num || !name || !dob) {
-        showToast("Missing Fields", "Please complete all PAN KYC fields.", "error");
-        return;
-      }
+      if (!num || !name || !dob) return showToast("Missing Fields", "Please complete all PAN fields.", "error");
 
-      const kycData = {
+      await saveKycAndActivateWallet(user.uid, {
         type: "pan",
         panNumber: num.slice(-4) ? `••••••${num.slice(-4)}` : num,
-        name,
-        dob,
+        name, dob,
         status: "verified",
         submittedAt: new Date().toLocaleDateString('en-IN')
-      };
-
-      await saveKycAndActivateWallet(user.uid, kycData);
+      });
     });
   }
 
   async function saveKycAndActivateWallet(uid, kycData) {
     try {
-      const userRef = db.collection("users").doc(uid);
-      await userRef.update({
+      await db.collection("users").doc(uid).update({
         walletActivated: true,
         walletBalance: 20.00,
         kycData: kycData
@@ -751,12 +574,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
       kycModal.classList.add("hidden");
       renderWalletState(currentUserData);
+      showToast("Wallet Activated!", "₹20 Signup Bonus credited!", "success");
 
-      showToast("Wallet Activated!", "₹20 Signup Bonus credited to your balance.", "success");
-
-      if (walletMenuItem) {
-        walletMenuItem.click();
-      }
+      if (walletMenuItem) walletMenuItem.click();
     } catch (err) {
       showToast("KYC Error", err.message, "error");
     }
@@ -764,7 +584,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function renderWalletState(data) {
     if (!data) return;
-
     const isActivated = data.walletActivated || false;
     const balance = (data.walletBalance !== undefined) ? data.walletBalance : 0.00;
     const kyc = data.kycData || null;
@@ -781,9 +600,7 @@ document.addEventListener("DOMContentLoaded", () => {
         openKycModalBtn.style.display = "none";
       }
 
-      if (bonusDateCell) {
-        bonusDateCell.textContent = kyc ? kyc.submittedAt : "Today";
-      }
+      if (bonusDateCell) bonusDateCell.textContent = kyc ? kyc.submittedAt : "Today";
 
       if (verifiedKycDisplayBox && kyc) {
         if (kyc.type === "aadhaar") {
@@ -811,13 +628,11 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  /* ------------------------------------------------------------------------
-     I. TOP-UP QR SCANNER & 5-MINUTE COUNTDOWN TIMER
-     ------------------------------------------------------------------------ */
+  /* --- TOP-UP QR SCANNER MODAL --- */
   if (openTopupQrBtn && topupQrModal) {
     openTopupQrBtn.addEventListener("click", () => {
       topupQrModal.classList.remove("hidden");
-      startQrCountdown(300); // 300 seconds = 5 minutes
+      startQrCountdown(300);
     });
   }
 
@@ -828,35 +643,38 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  function startQrCountdown(durationInSeconds) {
+  function startQrCountdown(duration) {
     clearInterval(qrTimerInterval);
-    let timer = durationInSeconds;
+    let timer = duration;
 
-    function updateDisplay() {
-      const minutes = Math.floor(timer / 60);
-      const seconds = timer % 60;
-
-      const formattedMin = minutes < 10 ? "0" + minutes : minutes;
-      const formattedSec = seconds < 10 ? "0" + seconds : seconds;
-
+    function update() {
+      const min = Math.floor(timer / 60);
+      const sec = timer % 60;
       if (qrCountdownTimer) {
-        qrCountdownTimer.textContent = `${formattedMin}:${formattedSec}`;
+        qrCountdownTimer.textContent = `${min < 10 ? '0' + min : min}:${sec < 10 ? '0' + sec : sec}`;
       }
-
       if (--timer < 0) {
         clearInterval(qrTimerInterval);
         if (topupQrModal) topupQrModal.classList.add("hidden");
-        showToast("Session Expired", "QR Top-Up payment session expired after 5 minutes.", "info");
+        showToast("Session Expired", "QR Top-Up session expired.", "info");
       }
     }
-
-    updateDisplay();
-    qrTimerInterval = setInterval(updateDisplay, 1000);
+    update();
+    qrTimerInterval = setInterval(update, 1000);
   }
 
-  /* ------------------------------------------------------------------------
-     J. PAYMENT METHODS (CARDS & UPI)
-     ------------------------------------------------------------------------ */
+  /* --- CARDS & UPI METHODS --- */
+  const cardModal = document.getElementById("cardModal");
+  const upiModal = document.getElementById("upiModal");
+  const openCardModalBtn = document.getElementById("openCardModalBtn");
+  const openUpiModalBtn = document.getElementById("openUpiModalBtn");
+  const closeCardModal = document.getElementById("closeCardModal");
+  const closeUpiModal = document.getElementById("closeUpiModal");
+  const addCardForm = document.getElementById("addCardForm");
+  const addUpiForm = document.getElementById("addUpiForm");
+  const cardNumberInput = document.getElementById("cardNumber");
+  const cardBrandBadge = document.getElementById("cardBrandBadge");
+
   if (openCardModalBtn) openCardModalBtn.addEventListener("click", () => cardModal.classList.remove("hidden"));
   if (openUpiModalBtn) openUpiModalBtn.addEventListener("click", () => upiModal.classList.remove("hidden"));
   if (closeCardModal) closeCardModal.addEventListener("click", () => cardModal.classList.add("hidden"));
@@ -864,16 +682,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (cardNumberInput && cardBrandBadge) {
     cardNumberInput.addEventListener("input", (e) => {
-      let val = e.target.value.replace(/\D/g, '');
-      val = val.match(/.{1,4}/g)?.join(' ') || val;
-      e.target.value = val.substring(0, 19);
-
-      const detected = detectCardBrand(val);
-      cardBrandBadge.textContent = detected;
+      let val = e.target.value.replace(/\D/g, '').substring(0, 16);
+      e.target.value = val.match(/.{1,4}/g)?.join(' ') || val;
+      cardBrandBadge.textContent = detectCardBrand(val);
     });
   }
 
-  // Save Card
   if (addCardForm) {
     addCardForm.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -884,20 +698,14 @@ document.addEventListener("DOMContentLoaded", () => {
       const num = document.getElementById("cardNumber").value.trim();
       const exp = document.getElementById("cardExpiry").value.trim();
 
-      if (!name || !num || !exp) {
-        showToast("Error", "Please fill out all card details.", "error");
-        return;
-      }
+      if (!name || !num || !exp) return showToast("Error", "Fill all card fields.", "error");
 
-      const brand = detectCardBrand(num);
-      const last4 = num.replace(/\s/g, '').slice(-4) || "0000";
-
-      const newPayment = {
+      const newCard = {
         id: "card_" + Date.now(),
         type: "card",
-        brand: brand,
-        name: name,
-        masked: `•••• •••• •••• ${last4}`,
+        brand: detectCardBrand(num),
+        name,
+        masked: `•••• •••• •••• ${num.replace(/\s/g, '').slice(-4) || '0000'}`,
         expiry: exp,
         createdAt: new Date().toISOString()
       };
@@ -906,41 +714,33 @@ document.addEventListener("DOMContentLoaded", () => {
         const userRef = db.collection("users").doc(user.uid);
         const doc = await userRef.get();
         let methods = (doc.exists && doc.data().paymentMethods) || [];
-        methods.push(newPayment);
-
+        methods.push(newCard);
         await userRef.update({ paymentMethods: methods });
         currentUserData.paymentMethods = methods;
-        
         renderPaymentMethods(methods);
         cardModal.classList.add("hidden");
         addCardForm.reset();
-        showToast("Saved", "Card details saved securely!", "success");
+        showToast("Saved", "Card details saved!", "success");
       } catch (err) {
         showToast("Error", err.message, "error");
       }
     });
   }
 
-  // Save UPI ID
   if (addUpiForm) {
     addUpiForm.addEventListener("submit", async (e) => {
       e.preventDefault();
       const user = auth.currentUser;
       if (!user) return;
 
-      const accountName = document.getElementById("upiAccountName").value.trim();
+      const name = document.getElementById("upiAccountName").value.trim();
       const vpa = document.getElementById("upiId").value.trim();
+      if (!name || !vpa) return showToast("Error", "Fill all UPI fields.", "error");
 
-      if (!accountName || !vpa) {
-        showToast("Error", "Please fill out all UPI details.", "error");
-        return;
-      }
-
-      const newPayment = {
+      const newUpi = {
         id: "upi_" + Date.now(),
         type: "upi",
-        name: accountName,
-        vpa: vpa,
+        name, vpa,
         createdAt: new Date().toISOString()
       };
 
@@ -948,15 +748,13 @@ document.addEventListener("DOMContentLoaded", () => {
         const userRef = db.collection("users").doc(user.uid);
         const doc = await userRef.get();
         let methods = (doc.exists && doc.data().paymentMethods) || [];
-        methods.push(newPayment);
-
+        methods.push(newUpi);
         await userRef.update({ paymentMethods: methods });
         currentUserData.paymentMethods = methods;
-
         renderPaymentMethods(methods);
         upiModal.classList.add("hidden");
         addUpiForm.reset();
-        showToast("Saved", "UPI ID saved successfully!", "success");
+        showToast("Saved", "UPI ID saved!", "success");
       } catch (err) {
         showToast("Error", err.message, "error");
       }
@@ -965,53 +763,34 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function renderPaymentMethods(methods) {
     if (!savedPaymentMethodsGrid) return;
-
     if (!methods || methods.length === 0) {
-      savedPaymentMethodsGrid.innerHTML = `<p style="font-size:0.82rem; color:var(--text-muted);">No saved payment cards or UPI IDs added yet.</p>`;
+      savedPaymentMethodsGrid.innerHTML = `<p style="font-size:0.82rem; color:var(--text-muted);">No saved payment methods added yet.</p>`;
       return;
     }
 
-    savedPaymentMethodsGrid.innerHTML = methods.map((item) => {
-      if (item.type === 'card') {
-        return `
-          <div class="saved-payment-card">
-            <div class="payment-card-left">
-              <span class="payment-type-badge">${item.brand}</span>
-              <div class="payment-card-info">
-                <h5>${item.masked}</h5>
-                <p>${item.name} • Exp: ${item.expiry}</p>
-              </div>
-            </div>
-            <button type="button" class="btn-revoke" onclick="deletePaymentMethod('${item.id}')">Delete</button>
+    savedPaymentMethodsGrid.innerHTML = methods.map((item) => `
+      <div class="saved-payment-card">
+        <div class="payment-card-left">
+          <span class="payment-type-badge">${item.type === 'card' ? item.brand : 'UPI'}</span>
+          <div class="payment-card-info">
+            <h5>${item.type === 'card' ? item.masked : item.vpa}</h5>
+            <p>${item.name} ${item.expiry ? '• Exp: ' + item.expiry : ''}</p>
           </div>
-        `;
-      } else {
-        return `
-          <div class="saved-payment-card">
-            <div class="payment-card-left">
-              <span class="payment-type-badge">UPI</span>
-              <div class="payment-card-info">
-                <h5>${item.vpa}</h5>
-                <p>${item.name}</p>
-              </div>
-            </div>
-            <button type="button" class="btn-revoke" onclick="deletePaymentMethod('${item.id}')">Delete</button>
-          </div>
-        `;
-      }
-    }).join('');
+        </div>
+        <button type="button" class="btn-revoke" onclick="deletePaymentMethod('${item.id}')">Delete</button>
+      </div>
+    `).join('');
   }
 
   window.deletePaymentMethod = async function(id) {
     const user = auth.currentUser;
-    if (!user || !confirm("Are you sure you want to remove this saved payment method?")) return;
+    if (!user || !confirm("Remove this payment method?")) return;
 
     try {
       const userRef = db.collection("users").doc(user.uid);
       const doc = await userRef.get();
       let methods = (doc.exists && doc.data().paymentMethods) || [];
       methods = methods.filter(m => m.id !== id);
-
       await userRef.update({ paymentMethods: methods });
       currentUserData.paymentMethods = methods;
       renderPaymentMethods(methods);
@@ -1023,30 +802,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function renderTransactionHistory(transactions) {
     if (!transactionHistoryContainer) return;
-
     if (!transactions || transactions.length === 0) {
-      transactionHistoryContainer.innerHTML = `
-        <div class="empty-history-box">
-          <p>Transaction history not available</p>
-        </div>
-      `;
+      transactionHistoryContainer.innerHTML = `<div class="empty-history-box"><p>Transaction history not available</p></div>`;
       return;
     }
 
     transactionHistoryContainer.innerHTML = `
       <table class="history-table">
         <thead>
-          <tr>
-            <th>Service</th>
-            <th>Date</th>
-            <th>Amount</th>
-            <th>Status</th>
-          </tr>
+          <tr><th>Service</th><th>Date</th><th>Amount</th><th>Status</th></tr>
         </thead>
         <tbody>
           ${transactions.map(t => `
             <tr>
-              <td>${t.service || 'LUROVA Service'}</td>
+              <td>${t.service || 'LUROVA'}</td>
               <td>${t.date || ''}</td>
               <td>${t.amount || '₹0'}</td>
               <td><span class="badge-success">${t.status || 'Successful'}</span></td>
@@ -1057,30 +826,18 @@ document.addEventListener("DOMContentLoaded", () => {
     `;
   }
 
-  /* ------------------------------------------------------------------------
-     K. FIREBASE AUTH STATE OBSERVER
-     ------------------------------------------------------------------------ */
+  /* --- AUTH STATE OBSERVER --- */
   auth.onAuthStateChanged(async (user) => {
     if (user) {
       try {
         const userDocRef = db.collection("users").doc(user.uid);
         const doc = await userDocRef.get();
+        currentUserData = doc.exists ? doc.data() : await handleNewSocialUserProfile(user);
 
-        if (doc.exists) {
-          currentUserData = doc.data();
-        } else {
-          currentUserData = await handleNewSocialUserProfile(user);
-        }
-
-        // Generate / Retrieve 7-digit ID
         currentUniqueId = await getOrCreateUserSevenDigitId(user);
-        if (uniqueIdDisplay) {
-          uniqueIdDisplay.textContent = currentUniqueId;
-        }
+        if (uniqueIdDisplay) uniqueIdDisplay.textContent = currentUniqueId;
 
-        const isRedirected = onLoginSuccess(user, currentUserData);
-
-        if (!isRedirected) {
+        if (!onLoginSuccess(user, currentUserData)) {
           populateProfileFields(currentUserData);
           renderAccurateActiveDevices();
           renderPaymentMethods(currentUserData.paymentMethods || []);
@@ -1089,7 +846,7 @@ document.addEventListener("DOMContentLoaded", () => {
           switchToProfileView();
         }
       } catch (error) {
-        console.error("Error fetching user data from Firestore:", error);
+        console.error("Auth state error:", error);
       }
     } else {
       currentUserData = null;
@@ -1100,38 +857,21 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  /* ------------------------------------------------------------------------
-     L. ACCURATE DEVICE & OS PARSING
-     ------------------------------------------------------------------------ */
-  function parseAccurateUserAgent() {
-    const ua = navigator.userAgent;
-    let browser = "Web Browser";
-    let os = "Desktop/Mobile";
-
-    if (ua.indexOf("Win") !== -1) os = "Windows PC";
-    else if (ua.indexOf("Mac") !== -1) os = "macOS Device";
-    else if (ua.indexOf("Android") !== -1) os = "Android Phone";
-    else if (ua.indexOf("iPhone") !== -1) os = "Apple iPhone";
-    else if (ua.indexOf("iPad") !== -1) os = "Apple iPad";
-    else if (ua.indexOf("Linux") !== -1) os = "Linux Workstation";
-
-    if (ua.indexOf("Chrome") !== -1 && ua.indexOf("Edg") === -1 && ua.indexOf("OPR") === -1) browser = "Google Chrome";
-    else if (ua.indexOf("Safari") !== -1 && ua.indexOf("Chrome") === -1) browser = "Apple Safari";
-    else if (ua.indexOf("Edg") !== -1) browser = "Microsoft Edge";
-    else if (ua.indexOf("Firefox") !== -1) browser = "Mozilla Firefox";
-    else if (ua.indexOf("OPR") !== -1 || ua.indexOf("Opera") !== -1) browser = "Opera Browser";
-
-    return { browser, os, full: `${os} (${browser})` };
-  }
-
   function renderAccurateActiveDevices() {
     if (!devicesListContainer) return;
+    const ua = navigator.userAgent;
+    let browser = "Chrome";
+    let os = "Desktop";
 
-    const deviceInfo = parseAccurateUserAgent();
-    const screenRes = `${window.screen.width}x${window.screen.height}`;
-    const lastActiveTime = new Date().toLocaleString('en-IN', {
-      day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
-    });
+    if (ua.indexOf("Win") !== -1) os = "Windows PC";
+    else if (ua.indexOf("Mac") !== -1) os = "macOS";
+    else if (ua.indexOf("Android") !== -1) os = "Android";
+    else if (ua.indexOf("iPhone") !== -1) os = "iPhone";
+    else if (ua.indexOf("Linux") !== -1) os = "Linux";
+
+    if (ua.indexOf("Safari") !== -1 && ua.indexOf("Chrome") === -1) browser = "Safari";
+    else if (ua.indexOf("Firefox") !== -1) browser = "Firefox";
+    else if (ua.indexOf("Edg") !== -1) browser = "Edge";
 
     devicesListContainer.innerHTML = `
       <div class="device-card primary-device">
@@ -1144,8 +884,8 @@ document.addEventListener("DOMContentLoaded", () => {
             </svg>
           </div>
           <div class="device-info">
-            <h4>${deviceInfo.full} <span class="badge-primary">Primary Device</span></h4>
-            <p>Active Now • Res: ${screenRes} • Last sync: ${lastActiveTime}</p>
+            <h4>${os} (${browser}) <span class="badge-primary">Primary Device</span></h4>
+            <p>Active Now • Res: ${window.screen.width}x${window.screen.height} • Last sync: Today</p>
           </div>
         </div>
         <button type="button" class="btn-revoke" disabled style="opacity:0.5; cursor:default;">Current Session</button>
@@ -1153,18 +893,12 @@ document.addEventListener("DOMContentLoaded", () => {
     `;
   }
 
-  /* ------------------------------------------------------------------------
-     M. GOOGLE & APPLE AUTH
-     ------------------------------------------------------------------------ */
   async function handleNewSocialUserProfile(user) {
-    const nameParts = (user.displayName || "").split(" ");
-    const firstName = nameParts[0] || "User";
-    const lastName = nameParts.slice(1).join(" ") || "";
-
+    const parts = (user.displayName || "").split(" ");
     const userData = {
       uid: user.uid,
-      firstName: firstName,
-      lastName: lastName,
+      firstName: parts[0] || "User",
+      lastName: parts.slice(1).join(" ") || "",
       email: user.email || "",
       phone: user.phoneNumber || "",
       address: "",
@@ -1177,127 +911,53 @@ document.addEventListener("DOMContentLoaded", () => {
       kycData: null,
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     };
-
     await db.collection("users").doc(user.uid).set(userData);
     return userData;
   }
 
-  async function handleGoogleAuth() {
-    const provider = new firebase.auth.GoogleAuthProvider();
-    try {
-      await auth.signInWithPopup(provider);
-      showToast("Success", "Logged in with Google", "success");
-    } catch (error) {
-      if (error.code === 'auth/popup-blocked' || error.code === 'auth/popup-closed-by-user') {
-        auth.signInWithRedirect(provider);
-      } else {
-        showToast("Google Auth Error", error.message, "error");
-      }
-    }
-  }
-
-  async function handleAppleAuth() {
-    const provider = new firebase.auth.OAuthProvider('apple.com');
-    try {
-      await auth.signInWithPopup(provider);
-      showToast("Success", "Logged in with Apple", "success");
-    } catch (error) {
-      if (error.code === 'auth/popup-blocked' || error.code === 'auth/popup-closed-by-user') {
-        auth.signInWithRedirect(provider);
-      } else {
-        showToast("Apple Auth Error", error.message, "error");
-      }
-    }
-  }
-
-  if (googleLoginBtn) googleLoginBtn.addEventListener("click", handleGoogleAuth);
-  if (googleSignupBtn) googleSignupBtn.addEventListener("click", handleGoogleAuth);
-  if (appleLoginBtn) appleLoginBtn.addEventListener("click", handleAppleAuth);
-  if (appleSignupBtn) appleSignupBtn.addEventListener("click", handleAppleAuth);
-
-  /* ------------------------------------------------------------------------
-     N. LIVE PASSWORD MATCH VALIDATION & FORM SUBMISSIONS
-     ------------------------------------------------------------------------ */
-  function validatePasswords() {
-    if (!signupPassword || !confirmPassword || !passwordMatchError) return true;
-    if (confirmPassword.value && signupPassword.value !== confirmPassword.value) {
-      passwordMatchError.style.display = "block";
-      return false;
-    } else {
-      passwordMatchError.style.display = "none";
-      return true;
-    }
-  }
-
-  if (confirmPassword && signupPassword) {
-    confirmPassword.addEventListener("input", validatePasswords);
-    signupPassword.addEventListener("input", validatePasswords);
-  }
-
+  /* --- REGISTRATION & LOGIN SUBMISSIONS --- */
   if (signupForm) {
     signupForm.addEventListener("submit", async (e) => {
       e.preventDefault();
-      if (!validatePasswords()) {
-        showToast("Error", "Please make sure your passwords match.", "error");
-        return;
+      if (signupPassword.value !== confirmPassword.value) {
+        if (passwordMatchError) passwordMatchError.style.display = "block";
+        return showToast("Error", "Passwords do not match.", "error");
       }
 
-      const firstName = document.getElementById("firstName") ? document.getElementById("firstName").value.trim() : "";
-      const lastName = document.getElementById("lastName") ? document.getElementById("lastName").value.trim() : "";
-      const email = document.getElementById("signupEmail") ? document.getElementById("signupEmail").value.trim().toLowerCase() : "";
-      const phone = document.getElementById("signupPhone") ? document.getElementById("signupPhone").value.trim() : "";
-      const password = signupPassword ? signupPassword.value : "";
+      const firstName = document.getElementById("firstName").value.trim();
+      const lastName = document.getElementById("lastName").value.trim();
+      const email = document.getElementById("signupEmail").value.trim().toLowerCase();
+      const phone = document.getElementById("signupPhone").value.trim();
+      const password = signupPassword.value;
 
-      if (!firstName || !lastName || !email || !phone || !password) {
-        showToast("Missing Fields", "Please fill out all required registration fields.", "error");
-        return;
-      }
+      if (!firstName || !email || !password) return showToast("Missing Fields", "Please complete all fields.", "error");
 
-      if (signupSubmitBtn) {
-        signupSubmitBtn.disabled = true;
-        signupSubmitBtn.querySelector("span").textContent = "Registering...";
-      }
-
+      signupSubmitBtn.disabled = true;
       try {
-        const userCredential = await auth.createUserWithEmailAndPassword(email, password);
-        const user = userCredential.user;
-
-        await user.sendEmailVerification();
+        const cred = await auth.createUserWithEmailAndPassword(email, password);
+        await cred.user.sendEmailVerification();
 
         const userData = {
-          uid: user.uid,
-          firstName: firstName,
-          lastName: lastName,
-          email: email,
-          phone: phone,
-          address: "",
-          dob: "",
-          gender: "",
-          paymentMethods: [],
-          transactions: [],
-          walletActivated: false,
-          walletBalance: 0,
-          kycData: null,
+          uid: cred.user.uid,
+          firstName, lastName, email, phone,
+          address: "", dob: "", gender: "",
+          paymentMethods: [], transactions: [],
+          walletActivated: false, walletBalance: 0, kycData: null,
           createdAt: firebase.firestore.FieldValue.serverTimestamp()
         };
 
-        await db.collection("users").doc(user.uid).set(userData);
+        await db.collection("users").doc(cred.user.uid).set(userData);
         currentUserData = userData;
+        showToast("Account Created", "Registration successful!", "success");
 
-        showToast("Account Created", "LUROVA Account registered successfully!", "success");
-
-        const isRedirected = onLoginSuccess(user, currentUserData);
-        if (!isRedirected) {
+        if (!onLoginSuccess(cred.user, currentUserData)) {
           populateProfileFields(currentUserData);
           switchToProfileView();
         }
       } catch (error) {
         showToast("Registration Error", error.message, "error");
       } finally {
-        if (signupSubmitBtn) {
-          signupSubmitBtn.disabled = false;
-          signupSubmitBtn.querySelector("span").textContent = "Register";
-        }
+        signupSubmitBtn.disabled = false;
       }
     });
   }
@@ -1305,83 +965,42 @@ document.addEventListener("DOMContentLoaded", () => {
   if (loginForm) {
     loginForm.addEventListener("submit", async (e) => {
       e.preventDefault();
-      const identifierInput = document.getElementById("loginIdentifier");
-      const passwordInput = document.getElementById("loginPassword");
+      const idInput = document.getElementById("loginIdentifier").value.trim().toLowerCase();
+      const pwd = document.getElementById("loginPassword").value;
 
-      const identifier = identifierInput ? identifierInput.value.trim().toLowerCase() : "";
-      const password = passwordInput ? passwordInput.value : "";
+      if (!idInput || !pwd) return showToast("Error", "Enter your credentials.", "error");
 
-      if (!identifier || !password) {
-        showToast("Missing Credentials", "Please enter both your Email/Phone and Password.", "error");
-        return;
-      }
-
-      if (loginSubmitBtn) {
-        loginSubmitBtn.disabled = true;
-        loginSubmitBtn.querySelector("span").textContent = "Logging in...";
-      }
-
+      loginSubmitBtn.disabled = true;
       try {
-        let targetEmail = identifier;
-
-        if (!identifier.includes("@")) {
-          const querySnapshot = await db.collection("users").where("phone", "==", identifier).get();
-          if (!querySnapshot.empty) {
-            targetEmail = querySnapshot.docs[0].data().email;
-          } else {
-            showToast("User Not Found", "No registered user found with this phone number.", "error");
-            if (loginSubmitBtn) {
-              loginSubmitBtn.disabled = false;
-              loginSubmitBtn.querySelector("span").textContent = "Login";
-            }
-            return;
-          }
+        let emailTarget = idInput;
+        if (!idInput.includes("@")) {
+          const snapshot = await db.collection("users").where("phone", "==", idInput).get();
+          if (snapshot.empty) throw new Error("No user registered with this phone number.");
+          emailTarget = snapshot.docs[0].data().email;
         }
 
-        const userCredential = await auth.signInWithEmailAndPassword(targetEmail, password);
-        const user = userCredential.user;
+        const cred = await auth.signInWithEmailAndPassword(emailTarget, pwd);
+        const doc = await db.collection("users").doc(cred.user.uid).get();
+        currentUserData = doc.exists ? doc.data() : null;
+        showToast("Success", "Logged in successfully!", "success");
 
-        if (user) {
-          const doc = await db.collection("users").doc(user.uid).get();
-          if (doc.exists) {
-            currentUserData = doc.data();
-          }
-
-          showToast("Success", "Logged in successfully!", "success");
-
-          const isRedirected = onLoginSuccess(user, currentUserData);
-
-          if (!isRedirected) {
-            populateProfileFields(currentUserData);
-            switchToProfileView();
-          }
+        if (!onLoginSuccess(cred.user, currentUserData)) {
+          populateProfileFields(currentUserData);
+          switchToProfileView();
         }
       } catch (error) {
         showToast("Login Error", error.message, "error");
       } finally {
-        if (loginSubmitBtn) {
-          loginSubmitBtn.disabled = false;
-          loginSubmitBtn.querySelector("span").textContent = "Login";
-        }
+        loginSubmitBtn.disabled = false;
       }
     });
   }
 
-  /* ------------------------------------------------------------------------
-     O. POPULATE & RENDER PROFILE FIELDS
-     ------------------------------------------------------------------------ */
+  /* --- PROFILE UTILITIES --- */
   function populateProfileFields(data) {
     if (!data) return;
-
-    if (userAvatar) {
-      userAvatar.textContent = data.firstName ? data.firstName.charAt(0).toUpperCase() : "L";
-    }
-
-    if (profileFullName) {
-      const full = `${data.firstName || ''} ${data.lastName || ''}`.trim();
-      profileFullName.textContent = full || "LUROVA User";
-    }
-
+    if (userAvatar) userAvatar.textContent = data.firstName ? data.firstName.charAt(0).toUpperCase() : "L";
+    if (profileFullName) profileFullName.textContent = `${data.firstName || ''} ${data.lastName || ''}`.trim() || "LUROVA User";
     if (profileEmail) profileEmail.textContent = data.email || "";
     if (resetEmailDisplay) resetEmailDisplay.textContent = data.email || "";
 
@@ -1406,24 +1025,16 @@ document.addEventListener("DOMContentLoaded", () => {
     if (authCard) authCard.classList.remove("hidden");
     if (bgArt) bgArt.classList.remove("fade-out");
     document.body.classList.remove("profile-view-active");
-
     if (loginForm) loginForm.reset();
     if (signupForm) signupForm.reset();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  /* ------------------------------------------------------------------------
-     P. EDIT, SAVE, & CANCEL PROFILE DETAILS
-     ------------------------------------------------------------------------ */
   if (editToggleBtn) {
     editToggleBtn.addEventListener("click", () => {
-      if (profileFirstName) profileFirstName.disabled = false;
-      if (profileLastName) profileLastName.disabled = false;
-      if (profilePhone) profilePhone.disabled = false;
-      if (profileAddress) profileAddress.disabled = false;
-      if (profileDob) profileDob.disabled = false;
-      if (profileGender) profileGender.disabled = false;
-
+      [profileFirstName, profileLastName, profilePhone, profileAddress, profileDob, profileGender].forEach(el => {
+        if (el) el.disabled = false;
+      });
       if (editActions) editActions.classList.remove("hidden");
       editToggleBtn.style.display = "none";
     });
@@ -1442,30 +1053,21 @@ document.addEventListener("DOMContentLoaded", () => {
       const user = auth.currentUser;
       if (!user) return;
 
-      const updatedFields = {
-        firstName: profileFirstName ? profileFirstName.value.trim() : "",
-        lastName: profileLastName ? profileLastName.value.trim() : "",
-        phone: profilePhone ? profilePhone.value.trim() : "",
-        address: profileAddress ? profileAddress.value.trim() : "",
-        dob: profileDob ? profileDob.value : "",
-        gender: profileGender ? profileGender.value : ""
+      const updated = {
+        firstName: profileFirstName.value.trim(),
+        lastName: profileLastName.value.trim(),
+        phone: profilePhone.value.trim(),
+        address: profileAddress.value.trim(),
+        dob: profileDob.value,
+        gender: profileGender.value
       };
 
       try {
-        await db.collection("users").doc(user.uid).update(updatedFields);
-        currentUserData = { ...currentUserData, ...updatedFields };
-
-        const refreshedUserPayload = {
-          uid: user.uid,
-          email: user.email,
-          displayName: `${updatedFields.firstName} ${updatedFields.lastName}`.trim(),
-          phone: updatedFields.phone
-        };
-        localStorage.setItem('lurova_account_user', JSON.stringify(refreshedUserPayload));
-
+        await db.collection("users").doc(user.uid).update(updated);
+        currentUserData = { ...currentUserData, ...updated };
         populateProfileFields(currentUserData);
         disableEditMode();
-        showToast("Profile Updated", "Your details have been saved successfully!", "success");
+        showToast("Profile Updated", "Details saved successfully!", "success");
       } catch (error) {
         showToast("Update Error", error.message, "error");
       }
@@ -1473,13 +1075,9 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function disableEditMode() {
-    if (profileFirstName) profileFirstName.disabled = true;
-    if (profileLastName) profileLastName.disabled = true;
-    if (profilePhone) profilePhone.disabled = true;
-    if (profileAddress) profileAddress.disabled = true;
-    if (profileDob) profileDob.disabled = true;
-    if (profileGender) profileGender.disabled = true;
-
+    [profileFirstName, profileLastName, profilePhone, profileAddress, profileDob, profileGender].forEach(el => {
+      if (el) el.disabled = true;
+    });
     if (editActions) editActions.classList.add("hidden");
     if (editToggleBtn) editToggleBtn.style.display = "inline-block";
   }
@@ -1490,9 +1088,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  /* ------------------------------------------------------------------------
-     Q. LOGOUT & DELETE ACCOUNT
-     ------------------------------------------------------------------------ */
   if (logoutBtn) {
     logoutBtn.addEventListener("click", async () => {
       try {
@@ -1518,7 +1113,7 @@ document.addEventListener("DOMContentLoaded", () => {
           document.cookie = "lurova_user=; domain=.lurova.life; path=/; max-age=0;";
           await db.collection("users").doc(user.uid).delete();
           await user.delete();
-          showToast("Account Deleted", "Your LUROVA Account was permanently deleted.", "info");
+          showToast("Account Deleted", "Your account was permanently deleted.", "info");
         } catch (error) {
           showToast("Delete Error", error.message, "error");
         }
